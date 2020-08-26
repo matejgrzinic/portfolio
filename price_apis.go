@@ -1,0 +1,150 @@
+package main
+
+import (
+	"encoding/json"
+	"io/ioutil"
+	"log"
+	"net/http"
+	"strconv"
+	"strings"
+	"sync"
+	"time"
+)
+
+type crypto []struct {
+	Symbol string `json:"symbol"`
+	Price  string `json:"price"`
+}
+
+type usdrates struct {
+	Rates struct {
+		CAD float64 `json:"CAD"`
+		HKD float64 `json:"HKD"`
+		ISK float64 `json:"ISK"`
+		PHP float64 `json:"PHP"`
+		DKK float64 `json:"DKK"`
+		HUF float64 `json:"HUF"`
+		CZK float64 `json:"CZK"`
+		GBP float64 `json:"GBP"`
+		RON float64 `json:"RON"`
+		SEK float64 `json:"SEK"`
+		IDR float64 `json:"IDR"`
+		INR float64 `json:"INR"`
+		BRL float64 `json:"BRL"`
+		RUB float64 `json:"RUB"`
+		HRK float64 `json:"HRK"`
+		JPY float64 `json:"JPY"`
+		THB float64 `json:"THB"`
+		CHF float64 `json:"CHF"`
+		EUR float64 `json:"EUR"`
+		MYR float64 `json:"MYR"`
+		BGN float64 `json:"BGN"`
+		TRY float64 `json:"TRY"`
+		CNY float64 `json:"CNY"`
+		NOK float64 `json:"NOK"`
+		NZD float64 `json:"NZD"`
+		ZAR float64 `json:"ZAR"`
+		USD float64 `json:"USD"`
+		MXN float64 `json:"MXN"`
+		SGD float64 `json:"SGD"`
+		AUD float64 `json:"AUD"`
+		ILS float64 `json:"ILS"`
+		KRW float64 `json:"KRW"`
+		PLN float64 `json:"PLN"`
+	} `json:"rates"`
+	Base string `json:"base"`
+	Date string `json:"date"`
+}
+
+type priceData struct {
+	Crypto   map[string]float64
+	USDRates usdrates
+	mux      sync.Mutex
+}
+
+var latestPriceData *priceData
+
+func startUpdatePriceInterval() {
+	latestPriceData = new(priceData)
+	latestPriceData.Crypto = make(map[string]float64)
+	updatePrice()
+	for range time.Tick(time.Minute) {
+		updatePrice()
+	}
+}
+
+func updatePrice() {
+	latestPriceData.mux.Lock()
+	defer latestPriceData.mux.Unlock()
+
+	var wg sync.WaitGroup
+
+	wg.Add(1)
+	go getCryptoPrices(latestPriceData, &wg)
+	wg.Add(1)
+	go getUSD(latestPriceData, &wg)
+
+	wg.Wait()
+}
+
+func getCryptoPrices(d *priceData, wg *sync.WaitGroup) {
+	defer wg.Done()
+
+	resp, err := http.Get("https://api.binance.com/api/v3/ticker/price")
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	defer resp.Body.Close()
+
+	data, err := ioutil.ReadAll(resp.Body)
+
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	var c crypto
+	err = json.Unmarshal(data, &c)
+
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	for _, v := range c {
+		if strings.HasSuffix(v.Symbol, "USDT") {
+			fValue, err := strconv.ParseFloat(v.Price, 64)
+			if err != nil {
+				log.Println(err)
+				continue
+			}
+			d.Crypto[v.Symbol[:len(v.Symbol)-4]] = fValue
+		}
+	}
+}
+
+func getUSD(d *priceData, wg *sync.WaitGroup) {
+	defer wg.Done()
+
+	resp, err := http.Get("https://api.exchangeratesapi.io/latest?base=USD")
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	defer resp.Body.Close()
+
+	data, err := ioutil.ReadAll(resp.Body)
+
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	err = json.Unmarshal(data, &d.USDRates)
+
+	if err != nil {
+		log.Println(err)
+		return
+	}
+}
