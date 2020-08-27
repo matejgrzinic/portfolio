@@ -54,10 +54,11 @@ func createUser(username string, password string) (*userData, bool) { // change 
 	hashpw := encrypt(password)
 	created := time.Now().Unix()
 
-	return &userData{Username: username, Passwordhash: hashpw, Created: created, Active: false}, true
+	return &userData{Username: username, Passwordhash: hashpw, Created: created, Active: true}, true
 }
 
 func createCookie(w http.ResponseWriter, sid string) {
+	deleteCookie(w)
 	expiration := time.Now().Add(time.Minute * cookieTimer)
 	cookie := http.Cookie{Name: "sid", Value: sid, Expires: expiration}
 	http.SetCookie(w, &cookie)
@@ -71,6 +72,7 @@ func deleteCookie(w http.ResponseWriter) {
 
 func refreshCookie(w http.ResponseWriter, cookie *http.Cookie) {
 	cookie.Expires = time.Now().Add(time.Minute * cookieTimer)
+	cookie.Path = "/"
 	http.SetCookie(w, cookie)
 	refreshConnectionExpiry(cookie.Value)
 }
@@ -93,6 +95,13 @@ func refreshConnectionExpiry(sid string) {
 	defer activeConnections.mux.Unlock()
 
 	activeConnections.connections[sid].Expires = time.Now().Add(time.Minute * cookieTimer)
+}
+
+func deleteConnection(sid string) {
+	activeConnections.mux.Lock()
+	defer activeConnections.mux.Unlock()
+
+	delete(activeConnections.connections, sid)
 }
 
 func addConnection(sid string, user *userData) {
@@ -122,20 +131,13 @@ func encrypt(s string) string {
 
 func isLoggedIn(w http.ResponseWriter, r *http.Request) (*http.Cookie, bool) {
 	sid, err := r.Cookie("sid")
+
 	if err != nil {
-		if r.URL.String() != "/login" && r.URL.String() != "/register" {
-			http.Redirect(w, r, "/login", http.StatusSeeOther)
-		}
-		// log.Println(err)
 		return sid, false
 	}
 
 	if !isAuthValid(sid.Value) {
 		deleteCookie(w)
-		// log.Println("cookie is not valid")
-		if r.URL.String() != "/login" && r.URL.String() != "/register" {
-			http.Redirect(w, r, "/login", http.StatusSeeOther)
-		}
 		return sid, false
 	}
 	refreshCookie(w, sid)

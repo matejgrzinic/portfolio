@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"math"
 	"sync"
 	"time"
 
@@ -26,7 +27,7 @@ type userData struct {
 	Active       bool   `json:"active"`
 }
 
-type dbData struct {
+type balanceData struct {
 	Data []struct {
 		Type string `json:"type"`
 		Data []struct {
@@ -72,44 +73,77 @@ func countall() {
 	fmt.Println(data.EstimatedDocumentCount(context.TODO()))
 }
 
-func price(user string) graphData {
+func getUserTimeframeData(user string, timeframe string) graphData {
 	var output graphData
+	const n int = 10
 
-	collectionName := "balance"
+	collectionName := "balances"
 
 	findOptions := options.Find()
-	findOptions.SetLimit(int64(60))
 	findOptions.SetSort(bson.D{{Key: "time", Value: -1}})
 
 	c := db.Collection(collectionName)
-	cur, err := c.Find(context.TODO(), bson.D{{Key: "username", Value: user}}, findOptions)
+
+	var selection bson.D
+
+	switch timeframe {
+	case "day":
+		selection = bson.D{{Key: "username", Value: user}, {Key: "time", Value: bson.M{"$gt": time.Now().Add(-time.Hour * 24).Unix()}}}
+		output.TimeUnit = "hour"
+		break
+	case "week":
+		selection = bson.D{{Key: "username", Value: user}, {Key: "time", Value: bson.M{"$gt": time.Now().Add(-time.Hour * 24 * 7).Unix()}}}
+		output.TimeUnit = "day"
+		break
+	case "month":
+		selection = bson.D{{Key: "username", Value: user}, {Key: "time", Value: bson.M{"$gt": time.Now().Add(-time.Hour * 24 * 7 * 30).Unix()}}}
+		output.TimeUnit = "week"
+		break
+	case "all":
+		selection = bson.D{{Key: "username", Value: user}}
+		output.TimeUnit = "month"
+		break
+	}
+
+	cur, err := c.Find(context.TODO(), selection, findOptions)
 
 	if err != nil {
 		log.Println(err)
 		return output // ?
 	}
 
-	for cur.Next(context.TODO()) {
-		output.Value = append(output.Value, float64(int64(cur.Current.Lookup("value").Double()*100))/100.0)
+	var tmpV []float64
+	var tmpT []string
 
-		t := time.Unix(cur.Current.Lookup("time").Int64(), 0)                         // remove /1000 when updating db with unix timestamp
-		output.Time = append(output.Time, t.UTC().Format("2006-01-02T15:04:05-0700")) // check for rfc2822 it looks better
+	for cur.Next(context.TODO()) {
+		tmpV = append(tmpV, float64(int64(cur.Current.Lookup("value").Double()*100))/100.0)
+
+		t := time.Unix(cur.Current.Lookup("time").Int64(), 0)
+		tmpT = append(tmpT, t.UTC().Format("2006-01-02T15:04:05-0700")) // check for rfc2822 it looks better
 		// output.Time = append(output.Time, t.Format("2006.01.02 15:04")) // shows warning in console
 	}
 
-	output.TimeUnit = "hour"
+	l := int(math.Ceil(float64(len(tmpV)) / float64(n)))
+
+	for i := range tmpV {
+		if i%l == 0 {
+			output.Time = append(output.Time, tmpT[i])
+			output.Value = append(output.Value, tmpV[i])
+		}
+	}
+
 	output.Username = user
 	return output
 }
 
-func getUserLatestPortfolio(user string) (*dbData, error) {
+func getUserLatestPortfolio(user string) (*balanceData, error) {
 	findOptions := options.FindOne()
 	findOptions.SetSort(bson.D{{Key: "time", Value: -1}})
 
-	c := db.Collection("balance")
+	c := db.Collection("balances")
 	cur := c.FindOne(context.TODO(), bson.D{{Key: "username", Value: user}}, findOptions)
 
-	var data *dbData
+	var data *balanceData
 	err := cur.Decode(&data)
 
 	if err != nil {
@@ -120,7 +154,7 @@ func getUserLatestPortfolio(user string) (*dbData, error) {
 	return data, nil
 }
 
-func updateUserPortfolioData(data *dbData) {
+func updateUserPortfolioData(data *balanceData) {
 	var totalSum float64
 	for i, e := range data.Data {
 		var typeSum float64
@@ -150,8 +184,8 @@ func updateUserPortfolio(user string, wg *sync.WaitGroup) {
 	insertUserPortfolio(user, data)
 }
 
-func insertUserPortfolio(user string, data *dbData) {
-	_, err := db.Collection("balance").InsertOne(context.TODO(), data) // todo change to balances
+func insertUserPortfolio(user string, data *balanceData) {
+	_, err := db.Collection("balances").InsertOne(context.TODO(), data)
 	if err != nil {
 		log.Println(err)
 	}
@@ -159,11 +193,11 @@ func insertUserPortfolio(user string, data *dbData) {
 }
 
 func insertNewUser(user *userData) {
-	fmt.Println("REEEEEEEEEEEEEEE")
-	_, err := db.Collection("users").InsertOne(context.TODO(), user) // todo change to balances
+	_, err := db.Collection("users").InsertOne(context.TODO(), user)
 	if err != nil {
 		log.Println(err)
 	}
+	exampleBalance(user.Username)
 }
 
 func getUserData(user string) (*userData, error) {

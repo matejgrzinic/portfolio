@@ -8,10 +8,11 @@ func index(w http.ResponseWriter, r *http.Request) {
 	sid, ok := isLoggedIn(w, r)
 
 	if !ok {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
 		return
 	}
 
-	data := price(activeConnections.connections[sid.Value].User.Username)
+	data := getUserTimeframeData(activeConnections.connections[sid.Value].User.Username, "all")
 	err := templates.ExecuteTemplate(w, "index", data)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -43,7 +44,13 @@ func login(w http.ResponseWriter, r *http.Request) {
 }
 
 func logout(w http.ResponseWriter, r *http.Request) {
-	deleteCookie(w)
+	sid, ok := isLoggedIn(w, r)
+
+	if ok {
+		deleteCookie(w)
+		deleteConnection(sid.Value)
+	}
+
 	http.Redirect(w, r, "/login", http.StatusSeeOther)
 }
 
