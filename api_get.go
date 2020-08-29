@@ -31,6 +31,17 @@ func userTimeframeAPI(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if timeframe == "alldata" {
+		data := getUserDisplayValues(activeConnections.connections[sid.Value].User.Username)
+		s, err := json.Marshal(data)
+
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		fmt.Fprintf(w, "%s", string(s))
+		return
+	}
 	data := getUserTimeframeData(activeConnections.connections[sid.Value].User.Username, timeframe)
 	s, err := json.Marshal(data)
 

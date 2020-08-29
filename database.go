@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"math"
+	"sort"
 	"sync"
 	"time"
 
@@ -20,11 +21,24 @@ type graphData struct {
 	Username string
 }
 
+type currencyData struct {
+	Currency    string
+	Symbol      string
+	Amount      float64
+	Price       float64
+	Value       float64
+	HourChange  float64
+	DayChange   float64
+	WeekChange  float64
+	MonthChange float64
+}
+
 type userData struct {
 	Username     string `json:"username"`
 	Passwordhash string `json:"passwordhash"`
 	Created      int64  `json:"created"`
 	Active       bool   `json:"active"`
+	Started      bool   `json:"started"`
 }
 
 type balanceData struct {
@@ -75,12 +89,15 @@ func countall() {
 
 func getUserTimeframeData(user string, timeframe string) graphData {
 	var output graphData
-	const n int = 10
+
+	const n int = 50
 
 	collectionName := "balances"
 
 	findOptions := options.Find()
 	findOptions.SetSort(bson.D{{Key: "time", Value: -1}})
+	findOptions.AllowDiskUse = boolPointer(true)
+	findOptions.SetProjection(bson.M{"value": 1, "time": 1, "_id": 0})
 
 	c := db.Collection(collectionName)
 
@@ -96,7 +113,7 @@ func getUserTimeframeData(user string, timeframe string) graphData {
 		output.TimeUnit = "day"
 		break
 	case "month":
-		selection = bson.D{{Key: "username", Value: user}, {Key: "time", Value: bson.M{"$gt": time.Now().Add(-time.Hour * 24 * 7 * 30).Unix()}}}
+		selection = bson.D{{Key: "username", Value: user}, {Key: "time", Value: bson.M{"$gt": time.Now().Add(-time.Hour * 24 * 30).Unix()}}}
 		output.TimeUnit = "week"
 		break
 	case "all":
@@ -115,16 +132,27 @@ func getUserTimeframeData(user string, timeframe string) graphData {
 	var tmpV []float64
 	var tmpT []string
 
-	for cur.Next(context.TODO()) {
-		tmpV = append(tmpV, float64(int64(cur.Current.Lookup("value").Double()*100))/100.0)
+	type valueType struct {
+		Value float64 `json:"value"`
+		Time  int64   `json:"time"`
+	}
 
-		t := time.Unix(cur.Current.Lookup("time").Int64(), 0)
+	for cur.Next(context.TODO()) {
+		var curData valueType
+		err := cur.Decode(&curData)
+
+		if err != nil {
+			log.Panicln(err)
+			continue
+		}
+
+		tmpV = append(tmpV, twoDecimals(curData.Value))
+		t := time.Unix(curData.Time, 0)
 		tmpT = append(tmpT, t.UTC().Format("2006-01-02T15:04:05-0700")) // check for rfc2822 it looks better
 		// output.Time = append(output.Time, t.Format("2006.01.02 15:04")) // shows warning in console
 	}
 
 	l := int(math.Ceil(float64(len(tmpV)) / float64(n)))
-
 	for i := range tmpV {
 		if i%l == 0 {
 			output.Time = append(output.Time, tmpT[i])
@@ -133,6 +161,96 @@ func getUserTimeframeData(user string, timeframe string) graphData {
 	}
 
 	output.Username = user
+	return output
+}
+
+func getUserDisplayValues(user string) []currencyData {
+	var output []currencyData
+
+	collectionName := "balances"
+
+	findOptions := options.Find()
+	findOptions.SetSort(bson.D{{Key: "time", Value: -1}})
+	findOptions.SetAllowDiskUse(true)
+
+	c := db.Collection(collectionName)
+
+	selection := bson.D{{Key: "username", Value: user}}
+
+	cur, err := c.Find(context.TODO(), selection, findOptions)
+
+	if err != nil {
+		log.Println(err)
+		return output // ?
+	}
+
+	currencyDisplay := map[string]*currencyData{}
+
+	first := true
+	var timeFirst int64
+
+	for cur.Next(context.TODO()) {
+		var curData balanceData
+		err := cur.Decode(&curData)
+
+		if err != nil {
+			log.Panicln(err)
+			continue
+		}
+
+		if first {
+			for _, e := range curData.Data {
+				for _, f := range e.Data {
+					currencyDisplay[f.Symbol] = &currencyData{
+						Currency: e.Type,
+						Symbol:   f.Symbol,
+						Price:    f.Price,
+						Amount:   f.Amount,
+						Value:    f.Value,
+					}
+				}
+			}
+			first = false
+			timeFirst = time.Now().Unix()
+
+		} else {
+			for _, e := range curData.Data {
+				for _, f := range e.Data {
+					if fCur, ok := currencyDisplay[f.Symbol]; ok {
+						if timeFirst-curData.Time < 60*60 {
+							fCur.HourChange = fCur.Price/f.Price - 1
+						}
+						if timeFirst-curData.Time < 60*60*24 {
+							fCur.DayChange = fCur.Price/f.Price - 1
+						}
+						if timeFirst-curData.Time < 60*60*24*7 {
+							fCur.WeekChange = fCur.Price/f.Price - 1
+						}
+						if timeFirst-curData.Time < 60*60*24*30 {
+							fCur.MonthChange = fCur.Price/f.Price - 1
+						}
+					}
+				}
+			}
+		}
+
+	}
+
+	for _, value := range currencyDisplay {
+		value.Price = twoDecimals(value.Price)
+		value.Amount = twoDecimals(value.Amount)
+		value.Value = twoDecimals(value.Value)
+		value.HourChange = twoDecimalsPercent(value.HourChange)
+		value.DayChange = twoDecimalsPercent(value.DayChange)
+		value.WeekChange = twoDecimalsPercent(value.WeekChange)
+		value.MonthChange = twoDecimalsPercent(value.MonthChange)
+		output = append(output, *value)
+	}
+
+	sort.Slice(output, func(i, j int) bool {
+		return output[i].Value > output[j].Value
+	})
+
 	return output
 }
 
@@ -154,6 +272,16 @@ func getUserLatestPortfolio(user string) (*balanceData, error) {
 	return data, nil
 }
 
+func updateUserPortfolio(user string, wg *sync.WaitGroup) {
+	defer wg.Done()
+	data, err := getUserLatestPortfolio(user)
+	if err != nil {
+		return
+	}
+	updateUserPortfolioData(data)
+	insertUserPortfolio(user, data)
+}
+
 func updateUserPortfolioData(data *balanceData) {
 	var totalSum float64
 	for i, e := range data.Data {
@@ -162,7 +290,7 @@ func updateUserPortfolioData(data *balanceData) {
 			for j, f := range e.Data {
 				if newPrice, ok := latestPriceData.Crypto[f.Symbol]; ok {
 					data.Data[i].Data[j].Price = newPrice * latestPriceData.USDRates.Rates.EUR
-					data.Data[i].Data[j].Value = newPrice*f.Amount + 1
+					data.Data[i].Data[j].Value = data.Data[i].Data[j].Price*f.Amount + 1
 				}
 				typeSum += data.Data[i].Data[j].Value
 			}
@@ -172,16 +300,6 @@ func updateUserPortfolioData(data *balanceData) {
 	}
 	data.Value = totalSum
 	data.Time = time.Now().Unix()
-}
-
-func updateUserPortfolio(user string, wg *sync.WaitGroup) {
-	defer wg.Done()
-	data, err := getUserLatestPortfolio(user)
-	if err != nil {
-		return
-	}
-	updateUserPortfolioData(data)
-	insertUserPortfolio(user, data)
 }
 
 func insertUserPortfolio(user string, data *balanceData) {
@@ -197,7 +315,7 @@ func insertNewUser(user *userData) {
 	if err != nil {
 		log.Println(err)
 	}
-	exampleBalance(user.Username)
+	//exampleBalance(user.Username)
 }
 
 func getUserData(user string) (*userData, error) {

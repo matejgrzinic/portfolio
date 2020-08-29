@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"net/http"
 )
 
@@ -12,7 +13,19 @@ func index(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	data := getUserTimeframeData(activeConnections.connections[sid.Value].User.Username, "all")
+	// fmt.Println(activeConnections.connections[sid.Value].User.Username, activeConnections.connections[sid.Value].User.Started)
+	if !activeConnections.connections[sid.Value].User.Started {
+		fmt.Fprintf(w, "first time")
+		// err := templates.ExecuteTemplate(w, "index", data)
+		// if err != nil {
+		// 	http.Error(w, err.Error(), http.StatusInternalServerError)
+		// 	return
+		// }
+		return
+	}
+
+	data := getUserTimeframeData(activeConnections.connections[sid.Value].User.Username, "day")
+	//var data graphData
 	err := templates.ExecuteTemplate(w, "index", data)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)

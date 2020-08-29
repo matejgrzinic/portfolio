@@ -54,7 +54,7 @@ func createUser(username string, password string) (*userData, bool) { // change 
 	hashpw := encrypt(password)
 	created := time.Now().Unix()
 
-	return &userData{Username: username, Passwordhash: hashpw, Created: created, Active: true}, true
+	return &userData{Username: username, Passwordhash: hashpw, Created: created, Active: true, Started: false}, true
 }
 
 func createCookie(w http.ResponseWriter, sid string) {

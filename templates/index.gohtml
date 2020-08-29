@@ -26,83 +26,27 @@
       <button type="button" class="btn btn-primary btn-sm" id="week">Week</button>
       <button type="button" class="btn btn-primary btn-sm" id="month">Month</button>
       <button type="button" class="btn btn-primary btn-sm" id="all">All</button>
+      <button type="button" class="btn btn-primary btn-sm" id="getdata">getdata</button>
     </div>
     <canvas id="myChart" width="60" height="18"> </canvas>
+    <br>
+    <table class="table table-hover table-dark" id="datatable">
+      
+    </table>
+</div>
+
   </body>
 
-  <script>
-    let myChart
-
-    setupGraph({{.}})
-
-    $( "#day" ).click(function() {
-      $.ajax({url: "/api/v1/timeframe/day", success: function(result){
-            let r = jQuery.parseJSON(result)
-            setupGraph(r)
-      }});
-    });
-
-    $( "#week" ).click(function() {
-      $.ajax({url: "/api/v1/timeframe/week", success: function(result){
-            let r = jQuery.parseJSON(result)
-            setupGraph(r)
-      }});
-    });
-
-    $( "#month" ).click(function() {
-      $.ajax({url: "/api/v1/timeframe/month", success: function(result){
-            let r = jQuery.parseJSON(result)
-            setupGraph(r)
-      }});
-    });
-
-    $( "#all" ).click(function() {
-      $.ajax({url: "/api/v1/timeframe/all", success: function(result){
-            let r = jQuery.parseJSON(result)
-            setupGraph(r)
-      }});
-    });
-
-    function clearChart() {
-      try {
-        myChart.destroy();
-      } catch (err) {}
-    }
-
-    function setupGraph(data) {
-      clearChart()
-      const ctx = document.getElementById("myChart").getContext("2d");
-      myChart = new Chart(ctx, {
-        type: "line",
-        data: {
-          labels: data.Time,
-          datasets: [
-            {
-              label: "net worth",
-              data: data.Value,
-              fill: false,
-              borderColor: "rgba(255, 99, 132, 1)",
-              backgroundColor: "rgba(255, 99, 132, 0.5)",
-              borderWidth: 1,
-            },
-          ],
-        },
-        options: {
-          scales: {
-            xAxes: [
-              {
-                type: "time",
-                time: {
-                  unit: data.TimeUnit,
-                },
-              },
-            ],
-          },
-        },
-      });
-    }
-  </script>
+  <script src="/static/graph.js"></script>
   
+  <script>
+    setupGraph({{.}})
+    setupDataTable()
+
+    $("#getdata").click(function () {
+      setupDataTable()
+    });
+  </script>
 </html>
 
 {{end}}
