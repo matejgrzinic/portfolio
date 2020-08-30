@@ -17,7 +17,7 @@
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
 
   <body>
-    <h1>Hello {{.Username}}</h1>
+    <h1>Hello {{.Graph.Username}}</h1>
     <a href="javascript:void(0)" onclick="window.location.replace('/logout');"
       >Logout</a
     >
@@ -28,11 +28,10 @@
       <button type="button" class="btn btn-primary btn-sm" id="all">All</button>
       <button type="button" class="btn btn-primary btn-sm" id="getdata">getdata</button>
     </div>
-    <canvas id="myChart" width="60" height="18"> </canvas>
-    <br>
-    <table class="table table-hover table-dark" id="datatable">
-      
-    </table>
+    <canvas id="myChart" width="600" height="150"> </canvas>
+    <div style="padding: 100px;">
+      <table class="table table-hover table-dark" id="datatable"></table>
+    </div>
 </div>
 
   </body>
@@ -40,12 +39,8 @@
   <script src="/static/graph.js"></script>
   
   <script>
-    setupGraph({{.}})
-    setupDataTable()
-
-    $("#getdata").click(function () {
-      setupDataTable()
-    });
+    setupGraph({{.Graph}})
+    setupDataTable({{.PortfolioValues}})
   </script>
 </html>
 

@@ -79,28 +79,22 @@ function setupGraph(data) {
   });
 }
 
-function setupDataTable() {
-  $.ajax({
-    url: "/api/v1/timeframe/alldata",
-    success: function (result) {
-      let tableData = jQuery.parseJSON(result);
-      let table = document.getElementById("datatable");
-      let headerData = [
-        "Currency",
-        "Symbol",
-        "Amount",
-        "Price",
-        "Value",
-        "H",
-        "D",
-        "W",
-        "M",
-      ];
-      $("#datatable tr").remove();
-      generateTableHead(table, headerData);
-      generateTable(table, tableData);
-    },
-  });
+function setupDataTable(tableData) {
+  let table = document.getElementById("datatable");
+  let headerData = [
+    "Currency",
+    "Symbol",
+    "Amount",
+    "Price",
+    "Value",
+    "H",
+    "D",
+    "W",
+    "M",
+  ];
+  $("#datatable tr").remove();
+  generateTableHead(table, headerData);
+  generateTable(table, tableData);
 }
 
 function generateTableHead(table, data) {
@@ -121,17 +115,36 @@ function generateTable(table, data) {
     let row = table.insertRow();
     for (key in element) {
       let cell = row.insertCell();
-
       let text = element[key];
       if (eurAdd.includes(key)) {
         text += " €";
       } else if (percentAdd.includes(key)) {
+        let span = document.createElement("span");
+        if (text >= 0) {
+          span.style.backgr = "green";
+        } else {
+          span.style.color = "red";
+        }
         text += " %";
+        cell.appendChild(span);
+        span.appendChild(document.createTextNode(text));
+        continue;
       }
-
-      let inText = document.createTextNode(text);
-
-      cell.appendChild(inText);
+      cell.appendChild(document.createTextNode(text));
     }
   }
 }
+
+function updateDataTable() {
+  $.ajax({
+    url: "/api/v1/timeframe/alldata",
+    success: function (result) {
+      let tableData = jQuery.parseJSON(result);
+      setupDataTable(tableData);
+    },
+  });
+}
+
+$("#getdata").click(function () {
+  updateDataTable();
+});

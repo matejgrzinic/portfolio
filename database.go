@@ -129,35 +129,43 @@ func getUserTimeframeData(user string, timeframe string) graphData {
 		return output // ?
 	}
 
-	var tmpV []float64
-	var tmpT []string
-
 	type valueType struct {
 		Value float64 `json:"value"`
 		Time  int64   `json:"time"`
 	}
 
-	for cur.Next(context.TODO()) {
-		var curData valueType
-		err := cur.Decode(&curData)
+	var queryLen int64
+	if timeframe != "all" {
+		queryLen, err = c.CountDocuments(context.TODO(), selection)
+	} else {
+		queryLen, err = c.EstimatedDocumentCount(context.TODO(), nil)
 
-		if err != nil {
-			log.Panicln(err)
-			continue
-		}
-
-		tmpV = append(tmpV, twoDecimals(curData.Value))
-		t := time.Unix(curData.Time, 0)
-		tmpT = append(tmpT, t.UTC().Format("2006-01-02T15:04:05-0700")) // check for rfc2822 it looks better
-		// output.Time = append(output.Time, t.Format("2006.01.02 15:04")) // shows warning in console
 	}
 
-	l := int(math.Ceil(float64(len(tmpV)) / float64(n)))
-	for i := range tmpV {
-		if i%l == 0 {
-			output.Time = append(output.Time, tmpT[i])
-			output.Value = append(output.Value, tmpV[i])
+	if err != nil {
+		log.Println(err)
+		return output // ?
+	}
+
+	l := int(math.Ceil(float64(queryLen) / float64(n)))
+	counter := 0
+
+	for cur.Next(context.TODO()) {
+		if counter%l == 0 {
+			var curData valueType
+			err := cur.Decode(&curData)
+
+			if err != nil {
+				log.Panicln(err)
+				continue
+			}
+
+			output.Value = append(output.Value, twoDecimals(curData.Value))
+			t := time.Unix(curData.Time, 0)
+			output.Time = append(output.Time, t.UTC().Format("2006-01-02T15:04:05-0700")) // check for rfc2822 it looks better
+			// output.Time = append(output.Time, t.Format("2006.01.02 15:04")) // shows warning in console
 		}
+		counter++
 	}
 
 	output.Username = user
@@ -175,7 +183,7 @@ func getUserDisplayValues(user string) []currencyData {
 
 	c := db.Collection(collectionName)
 
-	selection := bson.D{{Key: "username", Value: user}}
+	selection := bson.D{{Key: "username", Value: user}, {Key: "time", Value: bson.M{"$gt": time.Now().Add(-time.Hour * 24 * 30).Unix()}}}
 
 	cur, err := c.Find(context.TODO(), selection, findOptions)
 
@@ -188,6 +196,10 @@ func getUserDisplayValues(user string) []currencyData {
 
 	first := true
 	var timeFirst int64
+
+	const hourSeconds int64 = 60 * 60
+	const daySeconds int64 = 60 * 60 * 24
+	const weekSeconds int64 = 60 * 60 * 24 * 7
 
 	for cur.Next(context.TODO()) {
 		var curData balanceData
@@ -217,17 +229,19 @@ func getUserDisplayValues(user string) []currencyData {
 			for _, e := range curData.Data {
 				for _, f := range e.Data {
 					if fCur, ok := currencyDisplay[f.Symbol]; ok {
-						if timeFirst-curData.Time < 60*60 {
-							fCur.HourChange = fCur.Price/f.Price - 1
-						}
-						if timeFirst-curData.Time < 60*60*24 {
-							fCur.DayChange = fCur.Price/f.Price - 1
-						}
-						if timeFirst-curData.Time < 60*60*24*7 {
+						fCur.MonthChange = fCur.Price/f.Price - 1
+						timeDiff := timeFirst - curData.Time
+
+						if timeDiff < weekSeconds {
 							fCur.WeekChange = fCur.Price/f.Price - 1
-						}
-						if timeFirst-curData.Time < 60*60*24*30 {
-							fCur.MonthChange = fCur.Price/f.Price - 1
+
+							if timeDiff < daySeconds {
+								fCur.DayChange = fCur.Price/f.Price - 1
+
+								if timeDiff < hourSeconds {
+									fCur.HourChange = fCur.Price/f.Price - 1
+								}
+							}
 						}
 					}
 				}

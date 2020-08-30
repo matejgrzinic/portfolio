@@ -13,8 +13,9 @@ func index(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	user := activeConnections.connections[sid.Value].User
 	// fmt.Println(activeConnections.connections[sid.Value].User.Username, activeConnections.connections[sid.Value].User.Started)
-	if !activeConnections.connections[sid.Value].User.Started {
+	if !user.Started {
 		fmt.Fprintf(w, "first time")
 		// err := templates.ExecuteTemplate(w, "index", data)
 		// if err != nil {
@@ -24,8 +25,16 @@ func index(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	data := getUserTimeframeData(activeConnections.connections[sid.Value].User.Username, "day")
-	//var data graphData
+	type indexTemplate struct {
+		Graph           graphData
+		PortfolioValues []currencyData
+	}
+
+	data := &indexTemplate{
+		Graph:           getUserTimeframeData(user.Username, "day"),
+		PortfolioValues: getUserDisplayValues(user.Username),
+	}
+
 	err := templates.ExecuteTemplate(w, "index", data)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)

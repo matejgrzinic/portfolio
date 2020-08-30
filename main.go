@@ -40,7 +40,5 @@ func main() {
 		WriteTimeout: 10 * time.Second,
 	}
 
-	//benchmark()
-
 	log.Fatal(s.ListenAndServe())
 }
