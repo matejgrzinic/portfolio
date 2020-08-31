@@ -12,9 +12,19 @@ import (
 )
 
 func isValidTimeframe(timeframe string) bool {
-	validTimeframes := []string{"day", "week", "month", "all", "alldata"}
+	validTimeframes := []string{"day", "week", "month", "all"}
 	for _, t := range validTimeframes {
 		if timeframe == t {
+			return true
+		}
+	}
+	return false
+}
+
+func isValidTable(table string) bool {
+	validTables := []string{"portfolio"}
+	for _, t := range validTables {
+		if table == t {
 			return true
 		}
 	}

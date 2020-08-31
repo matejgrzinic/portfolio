@@ -79,6 +79,20 @@ function setupGraph(data) {
   });
 }
 
+$("#getdata").click(function () {
+  updateDataTable();
+});
+
+function updateDataTable() {
+  $.ajax({
+    url: "/api/v1/table/portfolio",
+    success: function (result) {
+      let tableData = jQuery.parseJSON(result);
+      setupDataTable(tableData);
+    },
+  });
+}
+
 function setupDataTable(tableData) {
   let table = document.getElementById("datatable");
   let headerData = [
@@ -93,6 +107,14 @@ function setupDataTable(tableData) {
     "M",
   ];
   $("#datatable tr").remove();
+  generateTableHead(table, headerData);
+  generateTable(table, tableData);
+}
+
+function setupTransactionTable(tableData, id) {
+  let table = document.getElementById(id);
+  let headerData = ["Symbol", "Amount", "Price", "Value", "Date"];
+  $("#" + id + " tr").remove();
   generateTableHead(table, headerData);
   generateTable(table, tableData);
 }
@@ -121,7 +143,7 @@ function generateTable(table, data) {
       } else if (percentAdd.includes(key)) {
         let span = document.createElement("span");
         if (text >= 0) {
-          span.style.backgr = "green";
+          span.style.color = "green";
         } else {
           span.style.color = "red";
         }
@@ -134,17 +156,3 @@ function generateTable(table, data) {
     }
   }
 }
-
-function updateDataTable() {
-  $.ajax({
-    url: "/api/v1/timeframe/alldata",
-    success: function (result) {
-      let tableData = jQuery.parseJSON(result);
-      setupDataTable(tableData);
-    },
-  });
-}
-
-$("#getdata").click(function () {
-  updateDataTable();
-});

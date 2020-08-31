@@ -10,7 +10,7 @@ import (
 	"github.com/gorilla/mux"
 )
 
-func userTimeframeAPI(w http.ResponseWriter, r *http.Request) {
+func apiV1Timeframe(w http.ResponseWriter, r *http.Request) {
 	for _, c := range r.Cookies() {
 		if c.Name == "sid" && c.Path != "/" {
 			c.Expires = time.Now().Add(-time.Minute)
@@ -31,17 +31,6 @@ func userTimeframeAPI(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if timeframe == "alldata" {
-		data := getUserDisplayValues(activeConnections.connections[sid.Value].User.Username)
-		s, err := json.Marshal(data)
-
-		if err != nil {
-			log.Println(err)
-			return
-		}
-		fmt.Fprintf(w, "%s", string(s))
-		return
-	}
 	data := getUserTimeframeData(activeConnections.connections[sid.Value].User.Username, timeframe)
 	s, err := json.Marshal(data)
 
@@ -50,6 +39,45 @@ func userTimeframeAPI(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	fmt.Fprintf(w, "%s", string(s))
+
+}
+
+func apiV1Table(w http.ResponseWriter, r *http.Request) {
+	for _, c := range r.Cookies() {
+		if c.Name == "sid" && c.Path != "/" {
+			c.Expires = time.Now().Add(-time.Minute)
+		}
+	}
+
+	sid, ok := isLoggedIn(w, r)
+
+	if !ok {
+		fmt.Fprintf(w, "not logged")
+		return
+	}
+
+	table := mux.Vars(r)["table"]
+
+	if !isValidTable(table) {
+		log.Println("invalid table")
+		return
+	}
+
+	var s []byte
+	var err error
+
+	switch table {
+	case "portfolio":
+		data := getUserDisplayValues(activeConnections.connections[sid.Value].User.Username)
+		s, err = json.Marshal(data)
+		break
+	}
+
+	if err != nil {
+		log.Println(err)
+		return
+	}
 	fmt.Fprintf(w, "%s", string(s))
 
 }

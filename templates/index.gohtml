@@ -8,31 +8,77 @@
       integrity="sha512-G8JE1Xbr0egZE5gNGyUm1fF764iHVfRXshIoUWCTPAbKkkItp/6qal5YAHXrxEu4HNfPTQs6HOu3D5vCGS1j3w=="
       crossorigin="anonymous"
     ></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
     <link
       rel="stylesheet"
       href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
       integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T"
       crossorigin="anonymous"
     />
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
-
+  </head>
   <body>
-    <h1>Hello {{.Graph.Username}}</h1>
-    <a href="javascript:void(0)" onclick="window.location.replace('/logout');"
-      >Logout</a
-    >
-    <div>
-      <button type="button" class="btn btn-primary btn-sm" id="day">Day</button>
-      <button type="button" class="btn btn-primary btn-sm" id="week">Week</button>
-      <button type="button" class="btn btn-primary btn-sm" id="month">Month</button>
-      <button type="button" class="btn btn-primary btn-sm" id="all">All</button>
-      <button type="button" class="btn btn-primary btn-sm" id="getdata">getdata</button>
+    <div class="container">
+      <h1>Hello {{.Graph.Username}}</h1>
+      <a href="javascript:void(0)" onclick="window.location.replace('/logout');"
+        >Logout</a
+      >
+      <div>
+        <button type="button" class="btn btn-primary btn-sm" id="day">Day</button>
+        <button type="button" class="btn btn-primary btn-sm" id="week">Week</button>
+        <button type="button" class="btn btn-primary btn-sm" id="month">Month</button>
+        <button type="button" class="btn btn-primary btn-sm" id="all">All</button>
+        <button type="button" class="btn btn-primary btn-sm" id="getdata">getdata</button>
+      </div>
     </div>
-    <canvas id="myChart" width="600" height="150"> </canvas>
-    <div style="padding: 100px;">
-      <table class="table table-hover table-dark" id="datatable"></table>
+
+    <div class="container">
+      <canvas id="myChart" width="600" height="220"> </canvas>
     </div>
-</div>
+    <div class="container">
+      <h2 style="width: 100%; text-align: center;">Current Portfolio</h2>
+      <table class="table table-hover" id="datatable"></table>
+    </div>
+
+    <div class="container">
+      <h2 style="width: 100%; text-align: center;">Transactions</h2>
+        <div class="row">
+          <div class="input-group mb-3">
+            <select class="form-control" id="transaction-type">
+              <option>Gain</option>
+              <option>Loss</option>
+            </select>
+            <select class="form-control" id="transaction-currency-type">
+              <option value="default">Select Currency type</option>
+              <option>Cash</option>
+              <option>Crypto</option>
+            </select>
+            <select class="form-control" id="transaction-currency">
+              <option value="default">Select Currency</option>
+            </select>
+            <input
+              type="number"
+              class="form-control"
+              placeholder="Enter amount"
+              aria-label=""
+              aria-describedby="basic-addon1"
+              id="transaction-amount"
+            />
+          <button class="btn btn-outline-secondary" type="button" id="transaction-submit">Submit</button>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="col-sm" style="width: 48%;">
+          <h3 class="bg-success" style="width: 100%; text-align: center;">Positive gain</h2>
+          <table class="table" id="positive"></table>
+        </div>
+        <div class="col-sm" style="width: 48%;">
+          <h3 class="bg-danger" style="width: 100%; text-align: center;">Negative gain</h2>
+          <table class="table" id="negative"></table>
+        </div>
+      </div>
+    </div>
+  </div>
 
   </body>
 
@@ -41,6 +87,39 @@
   <script>
     setupGraph({{.Graph}})
     setupDataTable({{.PortfolioValues}})
+    setupTransactionTable([], "positive")
+    setupTransactionTable([], "negative")
+
+    $("#transaction-currency-type").change(function() {
+      $("#transaction-currency option[value!='default']").remove();
+      switch($("#transaction-currency-type").val()){
+        case "Cash":
+          addOptions($('#transaction-currency'), ["cash", "cash2"])
+          break
+        case "Crypto":
+          addOptions($('#transaction-currency'), ["BTC", "ETH"])
+          break
+      }
+    });
+
+    function addOptions(el, options){
+      for (o of options){
+        el.append(new Option(o, o))
+      }
+    }
+
+    $("#transaction-submit").click(function () {
+      let formData = new FormData()
+      formData.append("type", $("#transaction-type").val())
+      formData.append("currency-type", $("#transaction-currency-type").val())
+      formData.append("currency", $("#transaction-currency").val())
+      formData.append("amount", $("#transaction-amount").val())
+
+      for (o of formData){
+        console.log(o)
+      }
+    });
+
   </script>
 </html>
 
