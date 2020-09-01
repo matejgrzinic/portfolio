@@ -81,3 +81,35 @@ func apiV1Table(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "%s", string(s))
 
 }
+
+func apiV1Transaction(w http.ResponseWriter, r *http.Request) {
+	parameters := make(map[string]string)
+
+	err := json.NewDecoder(r.Body).Decode(&parameters)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	type returnMessage struct {
+		Status  string
+		Message string
+	}
+
+	reply := &returnMessage{
+		Status:  "success",
+		Message: "successfully inserted element",
+	}
+
+	if parameters["type"] == "default" {
+		reply.Status = "error"
+	}
+
+	replyJSON, err := json.Marshal(reply)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	fmt.Fprintln(w, string(replyJSON))
+}

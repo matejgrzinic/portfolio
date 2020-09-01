@@ -15,6 +15,11 @@
       integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T"
       crossorigin="anonymous"
     />
+    <script
+      src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"
+      integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM"
+      crossorigin="anonymous"
+    ></script>
   </head>
   <body>
     <div class="container">
@@ -41,44 +46,129 @@
 
     <div class="container">
       <h2 style="width: 100%; text-align: center;">Transactions</h2>
-        <div class="row">
-          <div class="input-group mb-3">
-            <select class="form-control" id="transaction-type">
-              <option>Gain</option>
-              <option>Loss</option>
-            </select>
-            <select class="form-control" id="transaction-currency-type">
-              <option value="default">Select Currency type</option>
-              <option>Cash</option>
-              <option>Crypto</option>
-            </select>
-            <select class="form-control" id="transaction-currency">
-              <option value="default">Select Currency</option>
-            </select>
-            <input
-              type="number"
-              class="form-control"
-              placeholder="Enter amount"
-              aria-label=""
-              aria-describedby="basic-addon1"
-              id="transaction-amount"
-            />
-          <button class="btn btn-outline-secondary" type="button" id="transaction-submit">Submit</button>
-        </div>
-      </div>
-
       <div class="row">
-        <div class="col-sm" style="width: 48%;">
-          <h3 class="bg-success" style="width: 100%; text-align: center;">Positive gain</h2>
+        <button
+          type="button"
+          class="btn btn-primary"
+          id="transaction-new"
+        >
+          New Transaction
+        </button>
+      </div>
+      <div class="row">
+        <div class="col-sm alert alert-success">
+          <h3 class="alert-heading" style="width: 100%; text-align: center;">Positive gain</h2>
           <table class="table" id="positive"></table>
         </div>
-        <div class="col-sm" style="width: 48%;">
-          <h3 class="bg-danger" style="width: 100%; text-align: center;">Negative gain</h2>
+        <div class="col-sm alert alert-danger">
+          <h3 class="alert-heading" style="width: 100%; text-align: center;">Negative gain</h2>
           <table class="table" id="negative"></table>
         </div>
       </div>
     </div>
   </div>
+
+<div
+      class="modal fade"
+      id="exampleModal"
+      tabindex="-1"
+      role="dialog"
+      aria-labelledby="exampleModalLabel"
+      aria-hidden="true"
+    >
+      <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="exampleModalLabel">New Transaction</h5>
+            <button
+              type="button"
+              class="close"
+              data-dismiss="modal"
+              aria-label="Close"
+            >
+              <span aria-hidden="true">&times;</span>
+            </button>
+          </div>
+          <div class="modal-body">
+            <form>
+              <div class="form-group row">
+                <label for="transaction-type" class="col-sm-2 col-form-label"
+                  >Type</label
+                >
+                <div class="col-sm-10">
+                  <select class="form-control" id="transaction-type">
+                    <option value="default">Select Type</option>
+                    <option>Gain</option>
+                    <option>Loss</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-group row">
+                <label
+                  for="transaction-currency-type"
+                  class="col-sm-2 col-form-label"
+                  >Currency type</label
+                >
+                <div class="col-sm-10">
+                  <select class="form-control" id="transaction-currency-type">
+                    <option value="default">Select Currency type</option>
+                    <option>Cash</option>
+                    <option>Crypto</option>
+                    <option>Stock</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-group row">
+                <label
+                  for="transaction-currency"
+                  class="col-sm-2 col-form-label"
+                  >Currency</label
+                >
+                <div class="col-sm-10">
+                  <select class="form-control" id="transaction-currency">
+                    <option value="default">Select Currency</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-group row">
+                <label
+                  for="transaction-currency"
+                  class="col-sm-2 col-form-label"
+                  >Amount</label
+                >
+                <div class="col-sm-10">
+                  <input
+                    type="number"
+                    class="form-control"
+                    placeholder="Enter amount"
+                    aria-label=""
+                    aria-describedby="basic-addon1"
+                    id="transaction-amount"
+                  />
+                </div>
+              </div>
+            </form>
+          </div>
+          <div class="alert alert-success hidden" id="transaction-success">
+              This is a success alert—check it out!
+          </div>
+          <div class="alert alert-danger hidden" id="transaction-error">
+              Error
+          </div>
+          <div class="modal-footer">
+            <button
+              type="button"
+              class="btn btn-secondary"
+              data-dismiss="modal"
+            >
+              Close
+            </button>
+            
+            <button type="button" class="btn btn-primary" id="transaction-submit">Submit</button>
+          </div>
+        </div>
+      </div>
+    </div>
 
   </body>
 
@@ -109,15 +199,39 @@
     }
 
     $("#transaction-submit").click(function () {
-      let formData = new FormData()
-      formData.append("type", $("#transaction-type").val())
-      formData.append("currency-type", $("#transaction-currency-type").val())
-      formData.append("currency", $("#transaction-currency").val())
-      formData.append("amount", $("#transaction-amount").val())
+      $('#transaction-success').hide()
+      $('#transaction-error').hide()
 
-      for (o of formData){
-        console.log(o)
+      let transactionData = {
+        "type": $("#transaction-type").val(),
+        "currency-type":  $("#transaction-currency-type").val(),
+        "currency": $("#transaction-currency").val(),
+        "amount": $("#transaction-amount").val()
       }
+
+      $.ajax({
+        type: "POST",
+        url: "/api/v1/transaction",
+        data: JSON.stringify(transactionData),
+        success: function (result) {
+          let r = JSON.parse(result)
+          if (r.Status == "success"){
+            $('#transaction-success').show()
+            $('#transaction-success').text(r.Message)
+          } else {
+            $('#transaction-error').show()
+            $('#transaction-error').text(r.Message)
+          }
+        },
+        contentType: "json",
+      });
+    });
+
+    $("#transaction-new").click(function () { 
+      $('#transaction-success').hide()
+      $('#transaction-error').hide()
+
+      $('#exampleModal').modal('show')
     });
 
   </script>
