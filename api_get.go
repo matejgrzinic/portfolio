@@ -44,12 +44,6 @@ func apiV1Timeframe(w http.ResponseWriter, r *http.Request) {
 }
 
 func apiV1Table(w http.ResponseWriter, r *http.Request) {
-	for _, c := range r.Cookies() {
-		if c.Name == "sid" && c.Path != "/" {
-			c.Expires = time.Now().Add(-time.Minute)
-		}
-	}
-
 	sid, ok := isLoggedIn(w, r)
 
 	if !ok {
@@ -79,10 +73,41 @@ func apiV1Table(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	fmt.Fprintf(w, "%s", string(s))
+}
 
+func apiV1Currencies(w http.ResponseWriter, r *http.Request) {
+	_, ok := isLoggedIn(w, r)
+
+	if !ok {
+		fmt.Fprintf(w, "not logged")
+		return
+	}
+
+	currencyType := mux.Vars(r)["currency"]
+
+	if !isValidCurrecyType(currencyType) {
+		log.Println("invalid currency")
+		return
+	}
+
+	data := getAllCurrencies(currencyType)
+	s, err := json.Marshal(data)
+
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	fmt.Fprintf(w, "%s", string(s))
 }
 
 func apiV1Transaction(w http.ResponseWriter, r *http.Request) {
+	sid, ok := isLoggedIn(w, r)
+
+	if !ok {
+		fmt.Fprintf(w, "not logged")
+		return
+	}
+
 	parameters := make(map[string]string)
 
 	err := json.NewDecoder(r.Body).Decode(&parameters)
@@ -90,6 +115,8 @@ func apiV1Transaction(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+
+	isValidTransaction(parameters, sid.Value)
 
 	type returnMessage struct {
 		Status  string

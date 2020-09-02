@@ -27,8 +27,10 @@ func main() {
 	r.HandleFunc("/login", login)
 	r.HandleFunc("/register", register)
 	r.HandleFunc("/logout", logout)
+
 	r.HandleFunc("/api/v1/timeframe/{timeframe}", apiV1Timeframe)
 	r.HandleFunc("/api/v1/table/{table}", apiV1Table)
+	r.HandleFunc("/api/v1/currencies/{currency}", apiV1Currencies)
 	r.HandleFunc("/api/v1/transaction", apiV1Transaction)
 	// change first two if you want to change how to access it over internet. last one is location on disk
 	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("static/"))))

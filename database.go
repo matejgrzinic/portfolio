@@ -302,8 +302,8 @@ func updateUserPortfolioData(data *balanceData) {
 		var typeSum float64
 		if e.Type == "crypto" {
 			for j, f := range e.Data {
-				if newPrice, ok := latestPriceData.Crypto[f.Symbol]; ok {
-					data.Data[i].Data[j].Price = newPrice * latestPriceData.USDRates.Rates.EUR
+				if newPrice, ok := latestPriceData.Rates["crypto"][f.Symbol]; ok {
+					data.Data[i].Data[j].Price = newPrice * latestPriceData.Rates["cash"]["EUR"]
 					data.Data[i].Data[j].Value = data.Data[i].Data[j].Price*f.Amount + 1
 				}
 				typeSum += data.Data[i].Data[j].Value
@@ -351,7 +351,7 @@ func getUserData(user string) (*userData, error) {
 
 func startUpdateUserPortfolioInterval() {
 	for range time.Tick(time.Second) {
-		if len(latestPriceData.Crypto) > 0 {
+		if len(latestPriceData.Rates["crypto"]) > 0 {
 			updateLoop()
 			break
 		}

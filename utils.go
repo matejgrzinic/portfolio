@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"sort"
 	"sync"
 	"time"
 
@@ -29,6 +30,35 @@ func isValidTable(table string) bool {
 		}
 	}
 	return false
+}
+
+func isValidCurrecyType(currencyType string) bool {
+	viableCurrencyTypes := []string{"crypto", "cash", "stock"}
+	for _, t := range viableCurrencyTypes {
+		if currencyType == t {
+			return true
+		}
+	}
+	return false
+}
+
+func isValidTransaction(parameters map[string]string, sid string) string {
+	tType := parameters["type"]
+	currencyType := parameters["currency-type"]
+	currency := parameters["currency"]
+	amount := parameters["amount"]
+
+	fmt.Println(tType, currencyType, currency, amount)
+	return ""
+}
+
+func getAllCurrencies(currencyType string) []string {
+	data := []string{}
+	for k := range latestPriceData.Rates[currencyType] {
+		data = append(data, k)
+	}
+	sort.Strings(data)
+	return data
 }
 
 func exampleBalance(username string) {

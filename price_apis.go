@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"reflect"
 	"strconv"
 	"strings"
 	"sync"
@@ -57,16 +58,19 @@ type usdrates struct {
 }
 
 type priceData struct {
-	Crypto   map[string]float64
-	USDRates usdrates
-	mux      sync.Mutex
+	Rates map[string]map[string]float64
+	mux   sync.Mutex
 }
 
 var latestPriceData *priceData
 
 func startUpdatePriceInterval() {
 	latestPriceData = new(priceData)
-	latestPriceData.Crypto = make(map[string]float64)
+	latestPriceData.Rates = make(map[string]map[string]float64)
+	latestPriceData.Rates["crypto"] = make(map[string]float64)
+	latestPriceData.Rates["cash"] = make(map[string]float64)
+	latestPriceData.Rates["stock"] = make(map[string]float64)
+
 	updatePrice()
 	for range time.Tick(time.Minute) {
 		updatePrice()
@@ -80,14 +84,14 @@ func updatePrice() {
 	var wg sync.WaitGroup
 
 	wg.Add(1)
-	go getCryptoPrices(latestPriceData, &wg)
+	go getCryptoPrices(&wg)
 	wg.Add(1)
-	go getUSD(latestPriceData, &wg)
+	go getUSD(&wg)
 
 	wg.Wait()
 }
 
-func getCryptoPrices(d *priceData, wg *sync.WaitGroup) {
+func getCryptoPrices(wg *sync.WaitGroup) {
 	defer wg.Done()
 
 	resp, err := http.Get("https://api.binance.com/api/v3/ticker/price")
@@ -119,12 +123,12 @@ func getCryptoPrices(d *priceData, wg *sync.WaitGroup) {
 				log.Println(err)
 				continue
 			}
-			d.Crypto[v.Symbol[:len(v.Symbol)-4]] = fValue
+			latestPriceData.Rates["crypto"][v.Symbol[:len(v.Symbol)-4]] = fValue
 		}
 	}
 }
 
-func getUSD(d *priceData, wg *sync.WaitGroup) {
+func getUSD(wg *sync.WaitGroup) {
 	defer wg.Done()
 
 	resp, err := http.Get("https://api.exchangeratesapi.io/latest?base=USD")
@@ -141,10 +145,18 @@ func getUSD(d *priceData, wg *sync.WaitGroup) {
 		return
 	}
 
-	err = json.Unmarshal(data, &d.USDRates)
+	var c usdrates
+	err = json.Unmarshal(data, &c)
 
 	if err != nil {
 		log.Println(err)
 		return
+	}
+
+	v := reflect.ValueOf(c.Rates)
+	typeOfS := v.Type()
+
+	for i := 0; i < v.NumField(); i++ {
+		latestPriceData.Rates["cash"][typeOfS.Field(i).Name] = v.Field(i).Float()
 	}
 }

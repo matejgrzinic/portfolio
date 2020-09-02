@@ -184,18 +184,27 @@
       $("#transaction-currency option[value!='default']").remove();
       switch($("#transaction-currency-type").val()){
         case "Cash":
-          addOptions($('#transaction-currency'), ["cash", "cash2"])
+          addOptions($('#transaction-currency'), "cash")
           break
         case "Crypto":
-          addOptions($('#transaction-currency'), ["BTC", "ETH"])
+          addOptions($('#transaction-currency'),  "crypto")
+          break
+        case "Stock":
+          addOptions($('#transaction-currency'),  "stock")
           break
       }
     });
 
-    function addOptions(el, options){
-      for (o of options){
-        el.append(new Option(o, o))
-      }
+    function addOptions(el, currencyType) {
+      $.ajax({
+        url: "/api/v1/currencies/" + currencyType,
+        success: function (result) {
+          let r = jQuery.parseJSON(result);
+          for (o of r) {
+            el.append(new Option(o, o));
+          }
+        },
+      });
     }
 
     $("#transaction-submit").click(function () {
