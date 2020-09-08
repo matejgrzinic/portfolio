@@ -5,12 +5,23 @@ import (
 	"fmt"
 	"log"
 	"sort"
+	"strconv"
 	"sync"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
+
+type transaction struct {
+	Type         string  `json:"type"`
+	CurrencyType string  `json:"currency-type"`
+	Currency     string  `json:"currency"`
+	Amount       float64 `json:"amount"`
+	Description  string  `json:"description"`
+	Time         int64   `json:"time"`
+	User         string  `json:"username"`
+}
 
 func isValidTimeframe(timeframe string) bool {
 	validTimeframes := []string{"day", "week", "month", "all"}
@@ -42,14 +53,43 @@ func isValidCurrecyType(currencyType string) bool {
 	return false
 }
 
-func isValidTransaction(parameters map[string]string, sid string) string {
+func isValidTransaction(parameters map[string]string, username string) (*transaction, string) {
 	tType := parameters["type"]
 	currencyType := parameters["currency-type"]
 	currency := parameters["currency"]
 	amount := parameters["amount"]
+	description := parameters["description"]
 
-	fmt.Println(tType, currencyType, currency, amount)
-	return ""
+	validType := map[string]bool{"gain": true, "loss": true}
+	validCurrencyType := map[string]bool{"cash": true, "crypto": true, "stock": true}
+
+	if _, ok := validType[tType]; !ok {
+		return nil, "invalid type"
+	}
+
+	if _, ok := validCurrencyType[currencyType]; !ok {
+		return nil, "invalid currency type"
+	}
+
+	if _, ok := latestPriceData.Rates[currencyType][currency]; !ok {
+		return nil, "invalid currency"
+	}
+
+	f, err := strconv.ParseFloat(amount, 64)
+	if err != nil || f <= 0 {
+		return nil, "invalid amount"
+	}
+
+	t := &transaction{
+		Type:         tType,
+		CurrencyType: currencyType,
+		Currency:     currency,
+		Amount:       f,
+		Description:  description,
+		Time:         time.Now().Unix(),
+		User:         username,
+	}
+	return t, ""
 }
 
 func getAllCurrencies(currencyType string) []string {

@@ -98,8 +98,8 @@
                 <div class="col-sm-10">
                   <select class="form-control" id="transaction-type">
                     <option value="default">Select Type</option>
-                    <option>Gain</option>
-                    <option>Loss</option>
+                    <option value="gain" >Gain</option>
+                    <option value="loss" >Loss</option>
                   </select>
                 </div>
               </div>
@@ -112,9 +112,9 @@
                 <div class="col-sm-10">
                   <select class="form-control" id="transaction-currency-type">
                     <option value="default">Select Currency type</option>
-                    <option>Cash</option>
-                    <option>Crypto</option>
-                    <option>Stock</option>
+                    <option value="cash">Cash</option>
+                    <option value="crypto">Crypto</option>
+                    <option value="stock">Stock</option>
                   </select>
                 </div>
               </div>
@@ -144,6 +144,23 @@
                     aria-label=""
                     aria-describedby="basic-addon1"
                     id="transaction-amount"
+                  />
+                </div>
+              </div>
+              <div class="form-group row">
+                <label
+                  for="transaction-description"
+                  class="col-sm-2 col-form-label"
+                  >Dscription</label
+                >
+                <div class="col-sm-10">
+                  <input
+                    type="text"
+                    class="form-control"
+                    placeholder="Enter Description"
+                    aria-label=""
+                    aria-describedby="basic-addon1"
+                    id="transaction-description"
                   />
                 </div>
               </div>
@@ -183,13 +200,13 @@
     $("#transaction-currency-type").change(function() {
       $("#transaction-currency option[value!='default']").remove();
       switch($("#transaction-currency-type").val()){
-        case "Cash":
+        case "cash":
           addOptions($('#transaction-currency'), "cash")
           break
-        case "Crypto":
+        case "crypto":
           addOptions($('#transaction-currency'),  "crypto")
           break
-        case "Stock":
+        case "stock":
           addOptions($('#transaction-currency'),  "stock")
           break
       }
@@ -215,7 +232,8 @@
         "type": $("#transaction-type").val(),
         "currency-type":  $("#transaction-currency-type").val(),
         "currency": $("#transaction-currency").val(),
-        "amount": $("#transaction-amount").val()
+        "amount": $("#transaction-amount").val(),
+        "description": $("#transaction-description").val(),
       }
 
       $.ajax({
@@ -224,7 +242,7 @@
         data: JSON.stringify(transactionData),
         success: function (result) {
           let r = JSON.parse(result)
-          if (r.Status == "success"){
+          if (r.Status == "OK"){
             $('#transaction-success').show()
             $('#transaction-success').text(r.Message)
           } else {

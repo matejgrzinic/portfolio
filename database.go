@@ -78,6 +78,7 @@ func setup() *mongo.Database {
 	db.CreateCollection(context.TODO(), "users")
 	db.CreateCollection(context.TODO(), "balances")
 	db.CreateCollection(context.TODO(), "transactions")
+	db.CreateCollection(context.TODO(), "prices")
 
 	return db
 }
@@ -296,7 +297,69 @@ func updateUserPortfolio(user string, wg *sync.WaitGroup) {
 	insertUserPortfolio(user, data)
 }
 
-func updateUserPortfolioData(data *balanceData) {
+func updateUserPortfolioTransaction(user string, t *transaction) error {
+	bData, err := getUserLatestPortfolio(user)
+	if err != nil {
+		return err
+	}
+	if t.Type == "loss" {
+		found := false
+		for i, types := range bData.Data {
+			if types.Type == t.CurrencyType {
+				for j, currencies := range types.Data {
+					if currencies.Symbol == t.Currency {
+						newAmount := currencies.Amount - t.Amount
+						if newAmount >= 0 {
+							if newAmount == 0 {
+								l := len(bData.Data[i].Data)
+								bData.Data[i].Data[j] = bData.Data[i].Data[l-1]
+								bData.Data[i].Data = bData.Data[i].Data[:l-1]
+							} else {
+								bData.Data[i].Data[j].Amount = newAmount
+							}
+							found = true
+							break
+						}
+					}
+				}
+				break
+			}
+		}
+		if !found {
+			return fmt.Errorf("invalid transaction")
+		}
+	} else {
+		found := false
+		for i, types := range bData.Data {
+			if types.Type == t.CurrencyType {
+				for j, currencies := range types.Data {
+					if currencies.Symbol == t.Currency {
+						newAmount := currencies.Amount + t.Amount
+						bData.Data[i].Data[j].Amount = newAmount
+						found = true
+						break
+					}
+				}
+				if !found {
+					newData := struct {
+						Symbol string  "json:\"symbol\""
+						Amount float64 "json:\"amount\""
+						Price  float64 "json:\"price\""
+						Value  float64 "json:\"value\""
+					}{Symbol: t.Currency, Amount: t.Amount, Price: 0, Value: 0}
+					bData.Data[i].Data = append(bData.Data[i].Data, newData)
+				}
+				break
+			}
+		}
+	}
+	updateUserPortfolioData(bData)
+	insertUserPortfolio(user, bData)
+	insertTransaction(t)
+	return nil
+}
+
+func updateUserPortfolioData(data *balanceData) { // 1 / eurprice * cashprice
 	var totalSum float64
 	for i, e := range data.Data {
 		var typeSum float64
@@ -321,7 +384,31 @@ func insertUserPortfolio(user string, data *balanceData) {
 	if err != nil {
 		log.Println(err)
 	}
-	// fmt.Println("Updated user", user)
+}
+
+func insertPrice() {
+	result := struct {
+		Crypto map[string]float64
+		Cash   map[string]float64
+		Stock  map[string]float64
+		Time   int64
+	}{
+		Crypto: latestPriceData.Rates["crypto"],
+		Cash:   latestPriceData.Rates["cash"],
+		Stock:  latestPriceData.Rates["stock"],
+		Time:   time.Now().Unix(),
+	}
+	_, err := db.Collection("prices").InsertOne(context.TODO(), result)
+	if err != nil {
+		log.Println(err)
+	}
+}
+
+func insertTransaction(t *transaction) {
+	_, err := db.Collection("transactions").InsertOne(context.TODO(), t)
+	if err != nil {
+		log.Println(err)
+	}
 }
 
 func insertNewUser(user *userData) {
@@ -329,7 +416,6 @@ func insertNewUser(user *userData) {
 	if err != nil {
 		log.Println(err)
 	}
-	//exampleBalance(user.Username)
 }
 
 func getUserData(user string) (*userData, error) {

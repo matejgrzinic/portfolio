@@ -87,8 +87,9 @@ func updatePrice() {
 	go getCryptoPrices(&wg)
 	wg.Add(1)
 	go getUSD(&wg)
-
 	wg.Wait()
+
+	insertPrice()
 }
 
 func getCryptoPrices(wg *sync.WaitGroup) {

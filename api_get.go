@@ -116,20 +116,28 @@ func apiV1Transaction(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	isValidTransaction(parameters, sid.Value)
-
 	type returnMessage struct {
 		Status  string
 		Message string
 	}
 
 	reply := &returnMessage{
-		Status:  "success",
+		Status:  "OK",
 		Message: "successfully inserted element",
 	}
 
-	if parameters["type"] == "default" {
-		reply.Status = "error"
+	user := activeConnections.connections[sid.Value].User
+	tData, errMsg := isValidTransaction(parameters, user.Username)
+
+	if len(errMsg) > 0 {
+		reply.Status = "ERROR"
+		reply.Message = errMsg
+	} else {
+		err := updateUserPortfolioTransaction(user.Username, tData)
+		if err != nil {
+			reply.Status = "ERROR"
+			reply.Message = err.Error()
+		}
 	}
 
 	replyJSON, err := json.Marshal(reply)
