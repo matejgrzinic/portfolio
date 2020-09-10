@@ -72,7 +72,7 @@ func setup() *mongo.Database {
 
 	fmt.Println("Connected to MongoDB!")
 
-	const dbName = "test"
+	const dbName = "portfolio"
 	db := client.Database(dbName)
 
 	db.CreateCollection(context.TODO(), "users")
