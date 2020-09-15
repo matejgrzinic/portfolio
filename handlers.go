@@ -14,14 +14,8 @@ func index(w http.ResponseWriter, r *http.Request) {
 	}
 
 	user := activeConnections.connections[sid.Value].User
-	// fmt.Println(activeConnections.connections[sid.Value].User.Username, activeConnections.connections[sid.Value].User.Started)
 	if !user.Started {
 		fmt.Fprintf(w, "first time")
-		// err := templates.ExecuteTemplate(w, "index", data)
-		// if err != nil {
-		// 	http.Error(w, err.Error(), http.StatusInternalServerError)
-		// 	return
-		// }
 		return
 	}
 

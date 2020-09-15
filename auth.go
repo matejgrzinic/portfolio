@@ -22,7 +22,7 @@ type authDataMap struct {
 	mux         sync.Mutex
 }
 
-const cookieTimer time.Duration = 5
+const cookieTimerMinute time.Duration = 60 * 24
 
 var activeConnections authDataMap
 
@@ -59,7 +59,7 @@ func createUser(username string, password string) (*userData, bool) { // change 
 
 func createCookie(w http.ResponseWriter, sid string) {
 	deleteCookie(w)
-	expiration := time.Now().Add(time.Minute * cookieTimer)
+	expiration := time.Now().Add(time.Minute * cookieTimerMinute)
 	cookie := http.Cookie{Name: "sid", Value: sid, Expires: expiration}
 	http.SetCookie(w, &cookie)
 }
@@ -71,7 +71,7 @@ func deleteCookie(w http.ResponseWriter) {
 }
 
 func refreshCookie(w http.ResponseWriter, cookie *http.Cookie) {
-	cookie.Expires = time.Now().Add(time.Minute * cookieTimer)
+	cookie.Expires = time.Now().Add(time.Minute * cookieTimerMinute)
 	cookie.Path = "/"
 	http.SetCookie(w, cookie)
 	refreshConnectionExpiry(cookie.Value)
@@ -94,7 +94,7 @@ func refreshConnectionExpiry(sid string) {
 	activeConnections.mux.Lock()
 	defer activeConnections.mux.Unlock()
 
-	activeConnections.connections[sid].Expires = time.Now().Add(time.Minute * cookieTimer)
+	activeConnections.connections[sid].Expires = time.Now().Add(time.Minute * cookieTimerMinute)
 }
 
 func deleteConnection(sid string) {
@@ -108,7 +108,7 @@ func addConnection(sid string, user *userData) {
 	activeConnections.mux.Lock()
 	defer activeConnections.mux.Unlock()
 
-	activeConnections.connections[sid] = &authData{Sid: sid, User: user, Expires: time.Now().Add(time.Minute * cookieTimer)}
+	activeConnections.connections[sid] = &authData{Sid: sid, User: user, Expires: time.Now().Add(time.Minute * cookieTimerMinute)}
 }
 
 func generateSID() string {
