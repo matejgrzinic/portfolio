@@ -367,7 +367,20 @@ func updateUserPortfolioData(data *balanceData) { // 1 / eurprice * cashprice
 			for j, f := range e.Data {
 				if newPrice, ok := latestPriceData.Rates["crypto"][f.Symbol]; ok {
 					data.Data[i].Data[j].Price = newPrice * latestPriceData.Rates["cash"]["EUR"]
-					data.Data[i].Data[j].Value = data.Data[i].Data[j].Price*f.Amount + 1
+					data.Data[i].Data[j].Value = data.Data[i].Data[j].Price * f.Amount
+				}
+				typeSum += data.Data[i].Data[j].Value
+			}
+			data.Data[i].Value = typeSum
+		} else if e.Type == "cash" {
+			for j, f := range e.Data {
+				if newPrice, ok := latestPriceData.Rates["cash"][f.Symbol]; ok {
+					if f.Symbol != "EUR" {
+						data.Data[i].Data[j].Price = 1
+					} else {
+						data.Data[i].Data[j].Price = 1 / latestPriceData.Rates["cash"]["EUR"] * newPrice
+					}
+					data.Data[i].Data[j].Value = data.Data[i].Data[j].Price * f.Amount
 				}
 				typeSum += data.Data[i].Data[j].Value
 			}

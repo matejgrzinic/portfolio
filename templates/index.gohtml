@@ -20,55 +20,115 @@
       integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM"
       crossorigin="anonymous"
     ></script>
+    <style>
+      td {
+        white-space: nowrap;
+      }
+    </style>
   </head>
   <body>
     <div class="container">
-      <h1>Hello {{.Graph.Username}}</h1>
-      <a href="javascript:void(0)" onclick="window.location.replace('/logout');"
-        >Logout</a
-      >
-      <div>
-        <button type="button" class="btn btn-primary btn-sm" id="day">Day</button>
-        <button type="button" class="btn btn-primary btn-sm" id="week">Week</button>
-        <button type="button" class="btn btn-primary btn-sm" id="month">Month</button>
-        <button type="button" class="btn btn-primary btn-sm" id="all">All</button>
-        <button type="button" class="btn btn-primary btn-sm" id="getdata">getdata</button>
-      </div>
-    </div>
-
-    <div class="container">
-      <canvas id="myChart" width="600" height="220"> </canvas>
-    </div>
-    <div class="container">
-      <h2 style="width: 100%; text-align: center;">Current Portfolio</h2>
-      <table class="table table-hover" id="datatable"></table>
-    </div>
-
-    <div class="container">
-      <h2 style="width: 100%; text-align: center;">Transactions</h2>
       <div class="row">
-        <button
-          type="button"
-          class="btn btn-primary"
-          id="transaction-new"
-        >
-          New Transaction
-        </button>
+        <div class="col">
+          <h1>Hello {{.Graph.Username}}</h1>
+        </div>
+        <div class="col">
+          <button
+            type="button"
+            class="btn btn-primary btn-sm"
+            id="logout"
+            onclick="window.location.replace('/logout');"
+            style="float: right"
+          >
+            Logout
+          </button>
+        </div>
       </div>
       <div class="row">
-        <div class="col-sm alert alert-success">
-          <h3 class="alert-heading" style="width: 100%; text-align: center;">Positive gain</h2>
+        <div class="col">
+          <button type="button" class="btn btn-primary btn-sm" id="day">
+            Day
+          </button>
+          <button type="button" class="btn btn-primary btn-sm" id="week">
+            Week
+          </button>
+          <button type="button" class="btn btn-primary btn-sm" id="month">
+            Month
+          </button>
+          <button type="button" class="btn btn-primary btn-sm" id="all">
+            All
+          </button>
+          <button type="button" class="btn btn-primary btn-sm" id="getdata">
+            getdata
+          </button>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="col">
+          <h2>
+            Current Portfolio Balance: <span id="title-value"></span> € (<span
+              id="title-change"
+            ></span
+            >%)
+          </h2>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="col">
+          <canvas id="myChart" width="650" height="220"> </canvas>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="col">
+          <h2 style="width: 100%; text-align: center">Current Portfolio</h2>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="col">
+          <table class="table table-hover" id="datatable"></table>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="col">
+          <h2 style="width: 100%; text-align: center">Transactions</h2>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="col">
+          <button type="button" class="btn btn-primary" id="transaction-new">
+            New Transaction
+          </button>
+        </div>
+        <div class="col">
+          <button type="button" class="btn btn-primary" id="transaction-new">
+            New Trade
+          </button>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="col alert alert-success">
+          <h3 class="alert-heading" style="width: 100%; text-align: center">
+            Positive gain
+          </h3>
           <table class="table" id="positive"></table>
         </div>
-        <div class="col-sm alert alert-danger">
-          <h3 class="alert-heading" style="width: 100%; text-align: center;">Negative gain</h2>
+        <div class="col alert alert-danger">
+          <h3 class="alert-heading" style="width: 100%; text-align: center">
+            Negative gain
+          </h3>
           <table class="table" id="negative"></table>
         </div>
       </div>
     </div>
-  </div>
 
-<div
+    <div
       class="modal fade"
       id="exampleModal"
       tabindex="-1"
@@ -98,8 +158,8 @@
                 <div class="col-sm-10">
                   <select class="form-control" id="transaction-type">
                     <option value="default">Select Type</option>
-                    <option value="gain" >Gain</option>
-                    <option value="loss" >Loss</option>
+                    <option value="gain">Gain</option>
+                    <option value="loss">Loss</option>
                   </select>
                 </div>
               </div>
@@ -167,10 +227,10 @@
             </form>
           </div>
           <div class="alert alert-success hidden" id="transaction-success">
-              This is a success alert—check it out!
+            This is a success alert—check it out!
           </div>
           <div class="alert alert-danger hidden" id="transaction-error">
-              Error
+            Error
           </div>
           <div class="modal-footer">
             <button
@@ -180,24 +240,28 @@
             >
               Close
             </button>
-            
-            <button type="button" class="btn btn-primary" id="transaction-submit">Submit</button>
+
+            <button
+              type="button"
+              class="btn btn-primary"
+              id="transaction-submit"
+            >
+              Submit
+            </button>
           </div>
         </div>
       </div>
     </div>
-
   </body>
 
   <script src="/static/graph.js"></script>
-  
+
   <script>
     setupGraph({{.Graph}})
     setupDataTable({{.PortfolioValues}})
     setupTransactionTable([], "positive")
     setupTransactionTable([], "negative")
-
-    $("#transaction-currency-type").change(function() {
+      $("#transaction-currency-type").change(function() {
       $("#transaction-currency option[value!='default']").remove();
       switch($("#transaction-currency-type").val()){
         case "cash":
@@ -254,14 +318,13 @@
       });
     });
 
-    $("#transaction-new").click(function () { 
+    $("#transaction-new").click(function () {
       $('#transaction-success').hide()
       $('#transaction-error').hide()
 
       $('#exampleModal').modal('show')
     });
-
   </script>
 </html>
 
-{{end}}
+{{ end }}
