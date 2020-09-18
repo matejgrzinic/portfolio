@@ -18,7 +18,6 @@ type graphData struct {
 	Time     []string
 	Value    []float64
 	TimeUnit string
-	Username string
 }
 
 type currencyData struct {
@@ -55,6 +54,16 @@ type balanceData struct {
 	Value    float64 `json:"value"`
 	Time     int64   `json:"time"`
 	Username string  `json:"username"`
+}
+
+type transactionData struct {
+	Currencytype string `json:"currencytype"`
+	Currency     string `json:"currency"`
+	Amount       int    `json:"amount"`
+	Description  string `json:"description"`
+	Time         struct {
+		NumberLong string `json:"$numberLong"`
+	} `json:"time"`
 }
 
 func setup() *mongo.Database {
@@ -169,11 +178,10 @@ func getUserTimeframeData(user string, timeframe string) graphData {
 		counter++
 	}
 
-	output.Username = user
 	return output
 }
 
-func getUserDisplayValues(user string) []currencyData {
+func getUserDisplayData(user string) []currencyData {
 	var output []currencyData
 
 	collectionName := "balances"
@@ -266,6 +274,11 @@ func getUserDisplayValues(user string) []currencyData {
 		return output[i].Value > output[j].Value
 	})
 
+	return output
+}
+
+func getUserTransactionData(user string, transactiontype string) []transactionData {
+	var output []transactionData
 	return output
 }
 
@@ -517,4 +530,16 @@ func updateLoop() {
 	}
 	wg.Wait()
 	// fmt.Println("This round took ", time.Since(start).Microseconds(), "microseconds")
+}
+
+func getUserNetworth(user string) string {
+	var output string
+
+	data, err := getUserLatestPortfolio(user)
+
+	if err == nil {
+		output = fmt.Sprintf("%.2f", data.Value)
+	}
+
+	return output
 }

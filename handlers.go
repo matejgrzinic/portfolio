@@ -19,17 +19,7 @@ func index(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	type indexTemplate struct {
-		Graph           graphData
-		PortfolioValues []currencyData
-	}
-
-	data := &indexTemplate{
-		Graph:           getUserTimeframeData(user.Username, "day"),
-		PortfolioValues: getUserDisplayValues(user.Username),
-	}
-
-	err := templates.ExecuteTemplate(w, "index", data)
+	err := templates.ExecuteTemplate(w, "index", nil)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
