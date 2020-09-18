@@ -63,7 +63,7 @@ func apiV1Table(w http.ResponseWriter, r *http.Request) {
 
 	switch table {
 	case "portfolio":
-		data := getUserDisplayValues(activeConnections.connections[sid.Value].User.Username)
+		data := getUserDisplayData(activeConnections.connections[sid.Value].User.Username)
 		s, err = json.Marshal(data)
 		break
 	}
@@ -147,4 +147,40 @@ func apiV1Transaction(w http.ResponseWriter, r *http.Request) {
 	}
 
 	fmt.Fprintln(w, string(replyJSON))
+}
+
+func apiV1Username(w http.ResponseWriter, r *http.Request) {
+	sid, ok := isLoggedIn(w, r)
+
+	if !ok {
+		fmt.Fprintf(w, "not logged")
+		return
+	}
+
+	replyJSON, err := json.Marshal(activeConnections.connections[sid.Value].User.Username)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	fmt.Fprintln(w, string(replyJSON))
+}
+
+func apiV1Networth(w http.ResponseWriter, r *http.Request) {
+	sid, ok := isLoggedIn(w, r)
+
+	if !ok {
+		fmt.Fprintf(w, "not logged")
+		return
+	}
+
+	data := getUserNetworth(activeConnections.connections[sid.Value].User.Username)
+
+	replyJSON, err := json.Marshal(data)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	fmt.Fprintf(w, "%s", string(replyJSON))
 }

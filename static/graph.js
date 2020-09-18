@@ -1,49 +1,69 @@
 let myChart;
+let lastTimeframe = "day";
 
 $("#day").click(function () {
-  $.ajax({
-    url: "/api/v1/timeframe/day",
-    success: function (result) {
-      let r = jQuery.parseJSON(result);
-      setupGraph(r);
-    },
-  });
+  lastTimeframe = "day";
+  updateGraph("day");
 });
 
 $("#week").click(function () {
-  $.ajax({
-    url: "/api/v1/timeframe/week",
-    success: function (result) {
-      let r = jQuery.parseJSON(result);
-      setupGraph(r);
-    },
-  });
+  lastTimeframe = "week";
+  updateGraph("week");
 });
 
 $("#month").click(function () {
-  $.ajax({
-    url: "/api/v1/timeframe/month",
-    success: function (result) {
-      let r = jQuery.parseJSON(result);
-      setupGraph(r);
-    },
-  });
+  lastTimeframe = "month";
+  updateGraph("month");
 });
 
 $("#all").click(function () {
+  lastTimeframe = "all";
+  updateGraph("all");
+});
+
+function updateGraph(timeframe) {
   $.ajax({
-    url: "/api/v1/timeframe/all",
+    url: "/api/v1/timeframe/" + timeframe,
     success: function (result) {
       let r = jQuery.parseJSON(result);
       setupGraph(r);
     },
   });
-});
+}
+
+function updateUsername() {
+  $.ajax({
+    url: "/api/v1/username",
+    success: function (result) {
+      let r = jQuery.parseJSON(result);
+      $("#title-username").text(r);
+    },
+  });
+}
+
+function updateNetworth() {
+  $.ajax({
+    url: "/api/v1/networth",
+    success: function (result) {
+      let r = jQuery.parseJSON(result);
+      $("#title-networth").text(r);
+    },
+  });
+}
 
 function clearChart() {
   try {
     myChart.destroy();
   } catch (err) {}
+}
+
+function wholeSetup() {
+  updateGraph(lastTimeframe);
+  updateDataTable();
+  updateUsername();
+  updateNetworth();
+  setupTransactionTable([], "positive");
+  setupTransactionTable([], "negative");
 }
 
 function setupGraph(data) {
@@ -156,3 +176,67 @@ function generateTable(table, data) {
     }
   }
 }
+
+$("#transaction-currency-type").change(function () {
+  $("#transaction-currency option[value!='default']").remove();
+  switch ($("#transaction-currency-type").val()) {
+    case "cash":
+      addOptions($("#transaction-currency"), "cash");
+      break;
+    case "crypto":
+      addOptions($("#transaction-currency"), "crypto");
+      break;
+    case "stock":
+      addOptions($("#transaction-currency"), "stock");
+      break;
+  }
+});
+
+function addOptions(el, currencyType) {
+  $.ajax({
+    url: "/api/v1/currencies/" + currencyType,
+    success: function (result) {
+      let r = jQuery.parseJSON(result);
+      for (o of r) {
+        el.append(new Option(o, o));
+      }
+    },
+  });
+}
+
+$("#transaction-submit").click(function () {
+  $("#transaction-success").hide();
+  $("#transaction-error").hide();
+
+  let transactionData = {
+    type: $("#transaction-type").val(),
+    "currency-type": $("#transaction-currency-type").val(),
+    currency: $("#transaction-currency").val(),
+    amount: $("#transaction-amount").val(),
+    description: $("#transaction-description").val(),
+  };
+
+  $.ajax({
+    type: "POST",
+    url: "/api/v1/transaction",
+    data: JSON.stringify(transactionData),
+    success: function (result) {
+      let r = JSON.parse(result);
+      if (r.Status == "OK") {
+        $("#transaction-success").show();
+        $("#transaction-success").text(r.Message);
+      } else {
+        $("#transaction-error").show();
+        $("#transaction-error").text(r.Message);
+      }
+    },
+    contentType: "json",
+  });
+});
+
+$("#transaction-new").click(function () {
+  $("#transaction-success").hide();
+  $("#transaction-error").hide();
+
+  $("#exampleModal").modal("show");
+});
