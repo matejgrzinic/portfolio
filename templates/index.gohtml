@@ -58,9 +58,6 @@
           <button type="button" class="btn btn-primary btn-sm" id="all">
             All
           </button>
-          <button type="button" class="btn btn-primary btn-sm" id="getdata">
-            getdata
-          </button>
         </div>
       </div>
 
@@ -117,13 +114,13 @@
           <h3 class="alert-heading" style="width: 100%; text-align: center">
             Positive gain
           </h3>
-          <table class="table" id="positive"></table>
+          <table class="table" id="gain"></table>
         </div>
         <div class="col alert alert-danger">
           <h3 class="alert-heading" style="width: 100%; text-align: center">
             Negative gain
           </h3>
-          <table class="table" id="negative"></table>
+          <table class="table" id="loss"></table>
         </div>
       </div>
     </div>
@@ -211,7 +208,7 @@
                 <label
                   for="transaction-description"
                   class="col-sm-2 col-form-label"
-                  >Dscription</label
+                  >Description</label
                 >
                 <div class="col-sm-10">
                   <input
@@ -257,9 +254,9 @@
   <script src="/static/graph.js"></script>
 
   <script>
-    wholeSetup()
+    updateAll()
     setInterval(function(){
-      wholeSetup()
+      updateAll()
     },60000);
   </script>
 </html>

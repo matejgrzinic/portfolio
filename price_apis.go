@@ -89,6 +89,8 @@ func updatePrice() {
 	go getUSD(&wg)
 	wg.Wait()
 
+	convertToEUR()
+
 	insertPrice()
 }
 
@@ -160,4 +162,26 @@ func getUSD(wg *sync.WaitGroup) {
 	for i := 0; i < v.NumField(); i++ {
 		latestPriceData.Rates["cash"][typeOfS.Field(i).Name] = v.Field(i).Float()
 	}
+}
+
+func convertToEUR() {
+	convertCryptoToEUR()
+	// covertStockToEUR()
+	convertCashToEUR()
+}
+
+func convertCryptoToEUR() {
+	eurValue := latestPriceData.Rates["cash"]["EUR"]
+	for k, v := range latestPriceData.Rates["crypto"] {
+		latestPriceData.Rates["crypto"][k] = v * eurValue
+	}
+}
+func convertCashToEUR() {
+	eurValue := latestPriceData.Rates["cash"]["EUR"]
+	for k, v := range latestPriceData.Rates["cash"] {
+		if k != "EUR" {
+			latestPriceData.Rates["cash"][k] = eurValue / v
+		}
+	}
+	latestPriceData.Rates["cash"]["EUR"] = 1.0
 }

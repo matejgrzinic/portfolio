@@ -18,6 +18,8 @@ type transaction struct {
 	CurrencyType string  `json:"currency-type"`
 	Currency     string  `json:"currency"`
 	Amount       float64 `json:"amount"`
+	Price        float64 `json:"price"`
+	Value        float64 `json:"value"`
 	Description  string  `json:"description"`
 	Time         int64   `json:"time"`
 	User         string  `json:"username"`
@@ -34,7 +36,7 @@ func isValidTimeframe(timeframe string) bool {
 }
 
 func isValidTable(table string) bool {
-	validTables := []string{"portfolio"}
+	validTables := []string{"portfolio", "gain", "loss"}
 	for _, t := range validTables {
 		if table == t {
 			return true
@@ -45,6 +47,16 @@ func isValidTable(table string) bool {
 
 func isValidCurrecyType(currencyType string) bool {
 	viableCurrencyTypes := []string{"crypto", "cash", "stock"}
+	for _, t := range viableCurrencyTypes {
+		if currencyType == t {
+			return true
+		}
+	}
+	return false
+}
+
+func isValidTransactionType(currencyType string) bool {
+	viableCurrencyTypes := []string{"gain", "loss"}
 	for _, t := range viableCurrencyTypes {
 		if currencyType == t {
 			return true
@@ -85,6 +97,8 @@ func isValidTransaction(parameters map[string]string, username string) (*transac
 		CurrencyType: currencyType,
 		Currency:     currency,
 		Amount:       f,
+		Price:        latestPriceData.Rates[currencyType][currency],
+		Value:        latestPriceData.Rates[currencyType][currency] * f,
 		Description:  description,
 		Time:         time.Now().Unix(),
 		User:         username,
@@ -99,6 +113,25 @@ func getAllCurrencies(currencyType string) []string {
 	}
 	sort.Strings(data)
 	return data
+}
+
+func getUserCurrencies(user string, currencyType string) []string {
+	output := []string{}
+	userData, err := getUserLatestPortfolio(user)
+	if err != nil {
+		log.Println("error getting user data while getting his currencies. getUserCurrencies")
+		return output
+	}
+
+	for _, cType := range userData.Data {
+		if cType.Type == currencyType {
+			for _, c := range cType.Data {
+				output = append(output, c.Symbol)
+			}
+			break
+		}
+	}
+	return output
 }
 
 func exampleBalance(username string) {
