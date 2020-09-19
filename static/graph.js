@@ -57,13 +57,13 @@ function clearChart() {
   } catch (err) {}
 }
 
-function wholeSetup() {
+function updateAll() {
   updateGraph(lastTimeframe);
   updateDataTable();
   updateUsername();
   updateNetworth();
-  setupTransactionTable([], "positive");
-  setupTransactionTable([], "negative");
+  updateTransactionData("gain");
+  updateTransactionData("loss");
 }
 
 function setupGraph(data) {
@@ -99,10 +99,6 @@ function setupGraph(data) {
   });
 }
 
-$("#getdata").click(function () {
-  updateDataTable();
-});
-
 function updateDataTable() {
   $.ajax({
     url: "/api/v1/table/portfolio",
@@ -131,9 +127,19 @@ function setupDataTable(tableData) {
   generateTable(table, tableData);
 }
 
+function updateTransactionData(id) {
+  $.ajax({
+    url: "/api/v1/table/" + id,
+    success: function (result) {
+      let tableData = jQuery.parseJSON(result);
+      setupTransactionTable(tableData, id);
+    },
+  });
+}
+
 function setupTransactionTable(tableData, id) {
   let table = document.getElementById(id);
-  let headerData = ["Symbol", "Amount", "Price", "Value", "Date"];
+  let headerData = ["Symbol", "Amount", "Value", "Date"];
   $("#" + id + " tr").remove();
   generateTableHead(table, headerData);
   generateTable(table, tableData);
@@ -150,24 +156,28 @@ function generateTableHead(table, data) {
   }
 }
 
+function resetTransactionModal() {
+  $("#transaction-type").val("default");
+  $("#transaction-currency-type").val("default");
+  $("#transaction-currency").val("default");
+  $("#transaction-amount").val("");
+  $("#transaction-description").val("");
+}
+
 function generateTable(table, data) {
-  eurAdd = ["Price", "Value"];
   percentAdd = ["HourChange", "DayChange", "WeekChange", "MonthChange"];
   for (let element of data) {
     let row = table.insertRow();
     for (key in element) {
       let cell = row.insertCell();
       let text = element[key];
-      if (eurAdd.includes(key)) {
-        text += " €";
-      } else if (percentAdd.includes(key)) {
+      if (percentAdd.includes(key)) {
         let span = document.createElement("span");
-        if (text >= 0) {
-          span.style.color = "green";
-        } else {
+        if (text[0] == "-") {
           span.style.color = "red";
+        } else {
+          span.style.color = "green";
         }
-        text += " %";
         cell.appendChild(span);
         span.appendChild(document.createTextNode(text));
         continue;
@@ -177,24 +187,23 @@ function generateTable(table, data) {
   }
 }
 
-$("#transaction-currency-type").change(function () {
+$("#transaction-type").change(function () {
   $("#transaction-currency option[value!='default']").remove();
-  switch ($("#transaction-currency-type").val()) {
-    case "cash":
-      addOptions($("#transaction-currency"), "cash");
-      break;
-    case "crypto":
-      addOptions($("#transaction-currency"), "crypto");
-      break;
-    case "stock":
-      addOptions($("#transaction-currency"), "stock");
-      break;
-  }
+  addOptions($("#transaction-currency"));
 });
 
-function addOptions(el, currencyType) {
+$("#transaction-currency-type").change(function () {
+  $("#transaction-currency option[value!='default']").remove();
+  addOptions($("#transaction-currency"));
+});
+
+function addOptions(el) {
   $.ajax({
-    url: "/api/v1/currencies/" + currencyType,
+    url:
+      "/api/v1/currencies/" +
+      $("#transaction-type").val() +
+      "/" +
+      $("#transaction-currency-type").val(),
     success: function (result) {
       let r = jQuery.parseJSON(result);
       for (o of r) {
@@ -229,6 +238,8 @@ $("#transaction-submit").click(function () {
         $("#transaction-error").show();
         $("#transaction-error").text(r.Message);
       }
+      updateAll();
+      resetTransactionModal();
     },
     contentType: "json",
   });

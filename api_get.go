@@ -66,6 +66,14 @@ func apiV1Table(w http.ResponseWriter, r *http.Request) {
 		data := getUserDisplayData(activeConnections.connections[sid.Value].User.Username)
 		s, err = json.Marshal(data)
 		break
+	case "gain":
+		data := getUserTransactionData(activeConnections.connections[sid.Value].User.Username, "gain")
+		s, err = json.Marshal(data)
+		break
+	case "loss":
+		data := getUserTransactionData(activeConnections.connections[sid.Value].User.Username, "loss")
+		s, err = json.Marshal(data)
+		break
 	}
 
 	if err != nil {
@@ -76,23 +84,31 @@ func apiV1Table(w http.ResponseWriter, r *http.Request) {
 }
 
 func apiV1Currencies(w http.ResponseWriter, r *http.Request) {
-	_, ok := isLoggedIn(w, r)
+	sid, ok := isLoggedIn(w, r)
 
 	if !ok {
 		fmt.Fprintf(w, "not logged")
 		return
 	}
 
+	transactionType := mux.Vars(r)["type"]
 	currencyType := mux.Vars(r)["currency"]
 
-	if !isValidCurrecyType(currencyType) {
-		log.Println("invalid currency")
+	if !isValidTransactionType(transactionType) || !isValidCurrecyType(currencyType) {
+		log.Println("invalid option request")
+		fmt.Fprintf(w, "%s", string("[]"))
 		return
 	}
 
-	data := getAllCurrencies(currencyType)
-	s, err := json.Marshal(data)
+	var data []string
 
+	if transactionType == "gain" {
+		data = getAllCurrencies(currencyType)
+	} else {
+		data = getUserCurrencies(activeConnections.connections[sid.Value].User.Username, currencyType)
+	}
+
+	s, err := json.Marshal(data)
 	if err != nil {
 		log.Println(err)
 		return

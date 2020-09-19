@@ -30,7 +30,7 @@ func main() {
 
 	r.HandleFunc("/api/v1/timeframe/{timeframe}", apiV1Timeframe)
 	r.HandleFunc("/api/v1/table/{table}", apiV1Table)
-	r.HandleFunc("/api/v1/currencies/{currency}", apiV1Currencies)
+	r.HandleFunc("/api/v1/currencies/{type}/{currency}", apiV1Currencies)
 	r.HandleFunc("/api/v1/transaction", apiV1Transaction)
 	r.HandleFunc("/api/v1/username", apiV1Username)
 	r.HandleFunc("/api/v1/networth", apiV1Networth)

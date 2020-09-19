@@ -20,7 +20,7 @@ type graphData struct {
 	TimeUnit string
 }
 
-type currencyData struct {
+type currencyDataRead struct {
 	Currency    string
 	Symbol      string
 	Amount      float64
@@ -30,6 +30,18 @@ type currencyData struct {
 	DayChange   float64
 	WeekChange  float64
 	MonthChange float64
+}
+
+type currencyData struct {
+	Currency    string
+	Symbol      string
+	Amount      string
+	Price       string
+	Value       string
+	HourChange  string
+	DayChange   string
+	WeekChange  string
+	MonthChange string
 }
 
 type userData struct {
@@ -57,13 +69,17 @@ type balanceData struct {
 }
 
 type transactionData struct {
-	Currencytype string `json:"currencytype"`
-	Currency     string `json:"currency"`
-	Amount       int    `json:"amount"`
-	Description  string `json:"description"`
-	Time         struct {
-		NumberLong string `json:"$numberLong"`
-	} `json:"time"`
+	Currency string `json:"currency"`
+	Amount   string `json:"amount"`
+	Value    string `json:"value"`
+	Time     string `json:"time"`
+}
+
+type transactionDataRead struct {
+	Currency string  `json:"currency"`
+	Amount   float64 `json:"amount"`
+	Value    float64 `json:"value"`
+	Time     int64   `json:"time"`
 }
 
 func setup() *mongo.Database {
@@ -201,7 +217,7 @@ func getUserDisplayData(user string) []currencyData {
 		return output // ?
 	}
 
-	currencyDisplay := map[string]*currencyData{}
+	currencyDisplay := map[string]*currencyDataRead{}
 
 	first := true
 	var timeFirst int64
@@ -215,14 +231,14 @@ func getUserDisplayData(user string) []currencyData {
 		err := cur.Decode(&curData)
 
 		if err != nil {
-			log.Panicln(err)
+			log.Println(err)
 			continue
 		}
 
 		if first {
 			for _, e := range curData.Data {
 				for _, f := range e.Data {
-					currencyDisplay[f.Symbol] = &currencyData{
+					currencyDisplay[f.Symbol] = &currencyDataRead{
 						Currency: e.Type,
 						Symbol:   f.Symbol,
 						Price:    f.Price,
@@ -256,29 +272,69 @@ func getUserDisplayData(user string) []currencyData {
 				}
 			}
 		}
-
 	}
 
+	sliceCurrencies := []currencyDataRead{}
 	for _, value := range currencyDisplay {
-		value.Price = twoDecimals(value.Price)
-		value.Amount = twoDecimals(value.Amount)
-		value.Value = twoDecimals(value.Value)
-		value.HourChange = twoDecimalsPercent(value.HourChange)
-		value.DayChange = twoDecimalsPercent(value.DayChange)
-		value.WeekChange = twoDecimalsPercent(value.WeekChange)
-		value.MonthChange = twoDecimalsPercent(value.MonthChange)
-		output = append(output, *value)
+		sliceCurrencies = append(sliceCurrencies, *value)
 	}
 
-	sort.Slice(output, func(i, j int) bool {
-		return output[i].Value > output[j].Value
+	sort.Slice(sliceCurrencies, func(i, j int) bool {
+		return sliceCurrencies[i].Value > sliceCurrencies[j].Value
 	})
+
+	for _, value := range sliceCurrencies {
+		cur := currencyData{
+			Currency:    value.Currency,
+			Symbol:      value.Symbol,
+			Price:       fmt.Sprintf("%.2f €", value.Price),
+			Amount:      fmt.Sprintf("%.2f", value.Amount),
+			Value:       fmt.Sprintf("%.2f  €", value.Value),
+			HourChange:  fmt.Sprintf("%.2f %%", value.HourChange*100),
+			DayChange:   fmt.Sprintf("%.2f %%", value.DayChange*100),
+			WeekChange:  fmt.Sprintf("%.2f %%", value.WeekChange*100),
+			MonthChange: fmt.Sprintf("%.2f %%", value.MonthChange*100),
+		}
+		output = append(output, cur)
+	}
 
 	return output
 }
 
 func getUserTransactionData(user string, transactiontype string) []transactionData {
-	var output []transactionData
+	output := []transactionData{}
+
+	findOptions := options.Find()
+	findOptions.SetSort(bson.D{{Key: "time", Value: -1}})
+	findOptions.SetLimit(5)
+
+	selection := bson.D{{Key: "user", Value: user}, {Key: "type", Value: transactiontype}} // change user to username
+
+	cur, err := db.Collection("transactions").Find(context.TODO(), selection, findOptions)
+
+	if err != nil {
+		log.Println(err)
+		return output // ?
+	}
+
+	for cur.Next(context.TODO()) {
+		var curData transactionDataRead
+		err := cur.Decode(&curData)
+
+		if err != nil {
+			log.Println(err)
+			continue
+		}
+
+		curDataOutput := transactionData{
+			Currency: curData.Currency,
+			Amount:   fmt.Sprintf("%.2f", curData.Amount),
+			Value:    fmt.Sprintf("%.2f €", curData.Value),
+			Time:     time.Unix(curData.Time, 0).Format("2006.01.02 15:04:05"),
+		}
+		output = append(output, curDataOutput)
+	}
+
 	return output
 }
 
@@ -372,27 +428,14 @@ func updateUserPortfolioTransaction(user string, t *transaction) error {
 	return nil
 }
 
-func updateUserPortfolioData(data *balanceData) { // 1 / eurprice * cashprice
+func updateUserPortfolioData(data *balanceData) {
 	var totalSum float64
 	for i, e := range data.Data {
 		var typeSum float64
-		if e.Type == "crypto" {
+		if e.Type == "crypto" || e.Type == "cash" {
 			for j, f := range e.Data {
-				if newPrice, ok := latestPriceData.Rates["crypto"][f.Symbol]; ok {
-					data.Data[i].Data[j].Price = newPrice * latestPriceData.Rates["cash"]["EUR"]
-					data.Data[i].Data[j].Value = data.Data[i].Data[j].Price * f.Amount
-				}
-				typeSum += data.Data[i].Data[j].Value
-			}
-			data.Data[i].Value = typeSum
-		} else if e.Type == "cash" {
-			for j, f := range e.Data {
-				if newPrice, ok := latestPriceData.Rates["cash"][f.Symbol]; ok {
-					if f.Symbol != "EUR" {
-						data.Data[i].Data[j].Price = 1
-					} else {
-						data.Data[i].Data[j].Price = 1 / latestPriceData.Rates["cash"]["EUR"] * newPrice
-					}
+				if newPrice, ok := latestPriceData.Rates[e.Type][f.Symbol]; ok {
+					data.Data[i].Data[j].Price = newPrice
 					data.Data[i].Data[j].Value = data.Data[i].Data[j].Price * f.Amount
 				}
 				typeSum += data.Data[i].Data[j].Value
