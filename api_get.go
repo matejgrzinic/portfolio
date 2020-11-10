@@ -95,7 +95,6 @@ func apiV1Currencies(w http.ResponseWriter, r *http.Request) {
 	currencyType := mux.Vars(r)["currency"]
 
 	if !isValidTransactionType(transactionType) || !isValidCurrecyType(currencyType) {
-		log.Println("invalid option request")
 		fmt.Fprintf(w, "%s", string("[]"))
 		return
 	}

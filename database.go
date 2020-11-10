@@ -161,12 +161,7 @@ func getUserTimeframeData(user string, timeframe string) graphData {
 	}
 
 	var queryLen int64
-	if timeframe != "all" {
-		queryLen, err = c.CountDocuments(context.TODO(), selection)
-	} else {
-		queryLen, err = c.EstimatedDocumentCount(context.TODO(), nil)
-
-	}
+	queryLen, err = c.CountDocuments(context.TODO(), selection)
 
 	if err != nil {
 		log.Println(err)
@@ -432,16 +427,16 @@ func updateUserPortfolioData(data *balanceData) {
 	var totalSum float64
 	for i, e := range data.Data {
 		var typeSum float64
-		if e.Type == "crypto" || e.Type == "cash" {
-			for j, f := range e.Data {
-				if newPrice, ok := latestPriceData.Rates[e.Type][f.Symbol]; ok {
-					data.Data[i].Data[j].Price = newPrice
-					data.Data[i].Data[j].Value = data.Data[i].Data[j].Price * f.Amount
-				}
-				typeSum += data.Data[i].Data[j].Value
+
+		for j, f := range e.Data {
+			if newPrice, ok := latestPriceData.Rates[e.Type][f.Symbol]; ok {
+				data.Data[i].Data[j].Price = newPrice
+				data.Data[i].Data[j].Value = data.Data[i].Data[j].Price * f.Amount
 			}
-			data.Data[i].Value = typeSum
+			typeSum += data.Data[i].Data[j].Value
 		}
+		data.Data[i].Value = typeSum
+
 		totalSum += data.Data[i].Value
 	}
 	data.Value = totalSum
@@ -538,6 +533,10 @@ func getActiveUsers() []string {
 	}
 
 	return usernames
+}
+
+func retriveLatestPrices() {
+	// TO DO
 }
 
 func getAllUsers() []string {
