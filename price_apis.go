@@ -93,6 +93,12 @@ func updatePrice() {
 	latestPriceData.mux.Lock()
 	defer latestPriceData.mux.Unlock()
 
+	latestPriceData = new(priceData)
+	latestPriceData.Rates = make(map[string]map[string]float64)
+	latestPriceData.Rates["crypto"] = make(map[string]float64)
+	latestPriceData.Rates["cash"] = make(map[string]float64)
+	latestPriceData.Rates["stock"] = make(map[string]float64)
+
 	errorHappened = false
 
 	var wg sync.WaitGroup
@@ -103,14 +109,15 @@ func updatePrice() {
 	go getFiat(&wg)
 	wg.Add(1)
 	go getsStock(&wg)
+	
 	wg.Wait()
-
-	convertToEUR()
 
 	if errorHappened {
 		//retriveLatestPrices()
 		latestPriceData = latestPriceDataBackup
+		log.Println("used old data for latestPriceData")
 	} else {
+		convertToEUR()
 		insertPrice()
 		latestPriceDataBackup = latestPriceData
 	}
@@ -122,6 +129,7 @@ func getCryptoPrices(wg *sync.WaitGroup) {
 	resp, err := http.Get("https://api.binance.com/api/v3/ticker/price")
 	if err != nil {
 		log.Println(err)
+		errorHappened = true
 		return
 	}
 	defer resp.Body.Close()
@@ -161,6 +169,7 @@ func getFiat(wg *sync.WaitGroup) {
 	resp, err := http.Get("https://api.exchangeratesapi.io/latest?base=USD")
 	if err != nil {
 		log.Println(err)
+		errorHappened = true
 		return
 	}
 	defer resp.Body.Close()
