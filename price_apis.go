@@ -93,11 +93,11 @@ func updatePrice() {
 	latestPriceData.mux.Lock()
 	defer latestPriceData.mux.Unlock()
 
-	latestPriceData = new(priceData)
-	latestPriceData.Rates = make(map[string]map[string]float64)
-	latestPriceData.Rates["crypto"] = make(map[string]float64)
-	latestPriceData.Rates["cash"] = make(map[string]float64)
-	latestPriceData.Rates["stock"] = make(map[string]float64)
+	latestPriceDataBackup = new(priceData)
+	latestPriceDataBackup.Rates = make(map[string]map[string]float64)
+	latestPriceDataBackup.Rates["crypto"] = make(map[string]float64)
+	latestPriceDataBackup.Rates["cash"] = make(map[string]float64)
+	latestPriceDataBackup.Rates["stock"] = make(map[string]float64)
 
 	errorHappened = false
 
@@ -112,15 +112,19 @@ func updatePrice() {
 	
 	wg.Wait()
 
-	if errorHappened {
-		//retriveLatestPrices()
-		latestPriceData = latestPriceDataBackup
-		log.Println("used old data for latestPriceData")
-	} else {
-		convertToEUR()
-		insertPrice()
-		latestPriceDataBackup = latestPriceData
-	}
+	convertToEUR()
+	latestPriceData = latestPriceDataBackup
+	insertPrice()
+
+	// if errorHappened {
+	// 	//retriveLatestPrices()
+	// 	//latestPriceData = latestPriceDataBackup
+	// 	log.Println("used old data for latestPriceData")
+	// } else {
+	// 	convertToEUR()
+	// 	insertPrice()
+	// 	latestPriceData = latestPriceDataBackup
+	// }
 }
 
 func getCryptoPrices(wg *sync.WaitGroup) {
@@ -158,7 +162,7 @@ func getCryptoPrices(wg *sync.WaitGroup) {
 				log.Println(err)
 				continue
 			}
-			latestPriceData.Rates["crypto"][v.Symbol[:len(v.Symbol)-4]] = fValue
+			latestPriceDataBackup.Rates["crypto"][v.Symbol[:len(v.Symbol)-4]] = fValue
 		}
 	}
 }
@@ -195,7 +199,7 @@ func getFiat(wg *sync.WaitGroup) {
 	typeOfS := v.Type()
 
 	for i := 0; i < v.NumField(); i++ {
-		latestPriceData.Rates["cash"][typeOfS.Field(i).Name] = v.Field(i).Float()
+		latestPriceDataBackup.Rates["cash"][typeOfS.Field(i).Name] = v.Field(i).Float()
 	}
 }
 
@@ -206,27 +210,27 @@ func convertToEUR() {
 }
 
 func convertCryptoToEUR() {
-	eurValue := latestPriceData.Rates["cash"]["EUR"]
-	for k, v := range latestPriceData.Rates["crypto"] {
-		latestPriceData.Rates["crypto"][k] = v * eurValue
+	eurValue := latestPriceDataBackup.Rates["cash"]["EUR"]
+	for k, v := range latestPriceDataBackup.Rates["crypto"] {
+		latestPriceDataBackup.Rates["crypto"][k] = v * eurValue
 	}
 }
 
 func convertStockToEUR() {
-	eurValue := latestPriceData.Rates["cash"]["EUR"]
-	for k, v := range latestPriceData.Rates["stock"] {
-		latestPriceData.Rates["stock"][k] = v * eurValue
+	eurValue := latestPriceDataBackup.Rates["cash"]["EUR"]
+	for k, v := range latestPriceDataBackup.Rates["stock"] {
+		latestPriceDataBackup.Rates["stock"][k] = v * eurValue
 	}
 }
 
 func convertCashToEUR() {
-	eurValue := latestPriceData.Rates["cash"]["EUR"]
-	for k, v := range latestPriceData.Rates["cash"] {
+	eurValue := latestPriceDataBackup.Rates["cash"]["EUR"]
+	for k, v := range latestPriceDataBackup.Rates["cash"] {
 		if k != "EUR" {
-			latestPriceData.Rates["cash"][k] = eurValue / v
+			latestPriceDataBackup.Rates["cash"][k] = eurValue / v
 		}
 	}
-	latestPriceData.Rates["cash"]["EUR"] = 1.0
+	latestPriceDataBackup.Rates["cash"]["EUR"] = 1.0
 }
 
 func getsStock(wg *sync.WaitGroup) {
@@ -254,10 +258,11 @@ func getsStock(wg *sync.WaitGroup) {
 
 	if err != nil {
 		log.Println(err)
+		errorHappened = true
 		return
 	}
 
 	for _, stock := range c {
-		latestPriceData.Rates["stock"][stock.Symbol] = stock.Price
+		latestPriceDataBackup.Rates["stock"][stock.Symbol] = stock.Price
 	}
 }
