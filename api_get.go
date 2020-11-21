@@ -124,44 +124,106 @@ func apiV1Transaction(w http.ResponseWriter, r *http.Request) {
 	}
 
 	parameters := make(map[string]string)
-
 	err := json.NewDecoder(r.Body).Decode(&parameters)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	type returnMessage struct {
-		Status  string
-		Message string
-	}
-
-	reply := &returnMessage{
-		Status:  "OK",
-		Message: "successfully inserted element",
-	}
-
 	user := activeConnections.connections[sid.Value].User
-	tData, errMsg := isValidTransaction(parameters, user.Username)
 
-	if len(errMsg) > 0 {
-		reply.Status = "ERROR"
-		reply.Message = errMsg
-	} else {
-		err := updateUserPortfolioTransaction(user.Username, tData)
-		if err != nil {
-			reply.Status = "ERROR"
-			reply.Message = err.Error()
-		}
-	}
-
-	replyJSON, err := json.Marshal(reply)
+	err = isValidTransaction(parameters, user.Username)
 	if err != nil {
-		fmt.Println(err)
+		replyReturnMessage(&w, "ERROR", "invalid transaction values")
 		return
 	}
 
-	fmt.Fprintln(w, string(replyJSON))
+	tData := createNewTransaction(parameters, user.Username)
+
+	bData, err := getUserLatestPortfolio(user.Username)
+
+	if err != nil {
+		replyReturnMessage(&w, "ERROR", err.Error())
+		return
+	}
+
+	err = updateBalanceWithTransaction(tData, bData)
+	if err != nil {
+		replyReturnMessage(&w, "ERROR", err.Error())
+		return
+	}
+
+	refreshBalanceData(bData)
+
+	err = insertUserPortfolio(user.Username, bData)
+	if err != nil {
+		replyReturnMessage(&w, "ERROR", "error inserting new portfolio balance")
+		return
+	}
+	insertTransaction(tData)
+	replyReturnMessage(&w, "OK", "transaction successful")
+}
+
+func apiV1Trade(w http.ResponseWriter, r *http.Request) {
+	sid, ok := isLoggedIn(w, r)
+
+	if !ok {
+		fmt.Fprintf(w, "not logged")
+		return
+	}
+
+	parameters := make(map[string]string)
+	err := json.NewDecoder(r.Body).Decode(&parameters)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	gain, loss := parseTradeParameters(parameters)
+
+	user := activeConnections.connections[sid.Value].User
+
+	err = isValidTransaction(gain, user.Username)
+	if err != nil {
+		replyReturnMessage(&w, "ERROR", "invalid trade values")
+		return
+	}
+	err = isValidTransaction(loss, user.Username)
+	if err != nil {
+		replyReturnMessage(&w, "ERROR", "invalid trade values")
+		return
+	}
+
+	tDataGain := createNewTransaction(gain, user.Username)
+	tDataLoss := createNewTransaction(loss, user.Username)
+
+	bData, err := getUserLatestPortfolio(user.Username)
+
+	if err != nil {
+		replyReturnMessage(&w, "ERROR", err.Error())
+		return
+	}
+
+	err = updateBalanceWithTransaction(tDataGain, bData)
+	if err != nil {
+		replyReturnMessage(&w, "ERROR", err.Error())
+		return
+	}
+	err = updateBalanceWithTransaction(tDataLoss, bData)
+	if err != nil {
+		replyReturnMessage(&w, "ERROR", err.Error())
+		return
+	}
+
+	refreshBalanceData(bData)
+
+	err = insertUserPortfolio(user.Username, bData)
+	if err != nil {
+		replyReturnMessage(&w, "ERROR", "error inserting new portfolio balance")
+		return
+	}
+	insertTrade(tDataGain, tDataLoss)
+	replyReturnMessage(&w, "OK", "trade successful")
 }
 
 func apiV1Username(w http.ResponseWriter, r *http.Request) {

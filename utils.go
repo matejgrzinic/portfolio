@@ -2,8 +2,10 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
+	"net/http"
 	"sort"
 	"strconv"
 	"sync"
@@ -23,6 +25,13 @@ type transaction struct {
 	Description  string  `json:"description"`
 	Time         int64   `json:"time"`
 	User         string  `json:"username"`
+}
+
+type trade struct {
+	Gain transaction `json:"gain"`
+	Loss transaction `json:"loss"`
+	Time int64       `json:"time"`
+	User string      `json:"username"`
 }
 
 func isValidTimeframe(timeframe string) bool {
@@ -65,45 +74,53 @@ func isValidTransactionType(currencyType string) bool {
 	return false
 }
 
-func isValidTransaction(parameters map[string]string, username string) (*transaction, string) {
+func isValidTransaction(parameters map[string]string, username string) error {
 	tType := parameters["type"]
 	currencyType := parameters["currency-type"]
 	currency := parameters["currency"]
 	amount := parameters["amount"]
-	description := parameters["description"]
 
 	validType := map[string]bool{"gain": true, "loss": true}
 	validCurrencyType := map[string]bool{"cash": true, "crypto": true, "stock": true}
 
 	if _, ok := validType[tType]; !ok {
-		return nil, "invalid type"
+		return fmt.Errorf("invalid type")
 	}
 
 	if _, ok := validCurrencyType[currencyType]; !ok {
-		return nil, "invalid currency type"
+		return fmt.Errorf("invalid currency type")
 	}
 
 	if _, ok := latestPriceData.Rates[currencyType][currency]; !ok {
-		return nil, "invalid currency"
+		return fmt.Errorf("invalid currency")
 	}
 
 	f, err := strconv.ParseFloat(amount, 64)
 	if err != nil || f <= 0 {
-		return nil, "invalid amount"
+		return fmt.Errorf("invalid amount")
 	}
 
-	t := &transaction{
+	return nil
+}
+
+func createNewTransaction(parameters map[string]string, username string) *transaction {
+	tType := parameters["type"]
+	currencyType := parameters["currency-type"]
+	currency := parameters["currency"]
+	amount, _ := strconv.ParseFloat(parameters["amount"], 64)
+	description := parameters["description"]
+
+	return &transaction{
 		Type:         tType,
 		CurrencyType: currencyType,
 		Currency:     currency,
-		Amount:       f,
+		Amount:       amount,
 		Price:        latestPriceData.Rates[currencyType][currency],
-		Value:        latestPriceData.Rates[currencyType][currency] * f,
+		Value:        latestPriceData.Rates[currencyType][currency] * amount,
 		Description:  description,
 		Time:         time.Now().Unix(),
 		User:         username,
 	}
-	return t, ""
 }
 
 func getAllCurrencies(currencyType string) []string {
@@ -113,6 +130,12 @@ func getAllCurrencies(currencyType string) []string {
 	}
 	sort.Strings(data)
 	return data
+}
+
+func parseTradeParameters(parameters map[string]string) (map[string]string, map[string]string) {
+	gain := map[string]string{"type": "gain", "currency-type": parameters["buy-type"], "currency": parameters["buy-currency"], "amount": parameters["buy-amount"]}
+	loss := map[string]string{"type": "loss", "currency-type": parameters["sell-type"], "currency": parameters["sell-currency"], "amount": parameters["sell-amount"]}
+	return gain, loss
 }
 
 func getUserCurrencies(user string, currencyType string) []string {
@@ -257,4 +280,19 @@ func benchmarkGo() {
 	wg.Wait()
 
 	fmt.Println("Goroutine", time.Since(start).Seconds(), "s, found", counter, "records")
+}
+
+func replyReturnMessage(w *http.ResponseWriter, status string, message string) {
+	reply := &struct {
+		Status  string
+		Message string
+	}{Status: status, Message: message}
+
+	replyJSON, err := json.Marshal(reply)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	fmt.Fprintln(*w, string(replyJSON))
 }

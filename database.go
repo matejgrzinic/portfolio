@@ -82,7 +82,7 @@ type transactionDataRead struct {
 	Time     int64   `json:"time"`
 }
 
-func setup() *mongo.Database {
+func databaseSetup() *mongo.Database {
 	clientOptions := options.Client().ApplyURI("mongodb://localhost:27017")
 	client, err := mongo.Connect(context.TODO(), clientOptions)
 	if err != nil {
@@ -100,17 +100,7 @@ func setup() *mongo.Database {
 	const dbName = "portfolio"
 	db := client.Database(dbName)
 
-	db.CreateCollection(context.TODO(), "users")
-	db.CreateCollection(context.TODO(), "balances")
-	db.CreateCollection(context.TODO(), "transactions")
-	db.CreateCollection(context.TODO(), "prices")
-
 	return db
-}
-
-func countall() {
-	data := db.Collection("portfolio")
-	fmt.Println(data.EstimatedDocumentCount(context.TODO()))
 }
 
 func getUserTimeframeData(user string, timeframe string) graphData {
@@ -357,15 +347,12 @@ func updateUserPortfolio(user string, wg *sync.WaitGroup) {
 	if err != nil {
 		return
 	}
-	updateUserPortfolioData(data)
+	refreshBalanceData(data)
 	insertUserPortfolio(user, data)
 }
 
-func updateUserPortfolioTransaction(user string, t *transaction) error {
-	bData, err := getUserLatestPortfolio(user)
-	if err != nil {
-		return err
-	}
+func updateBalanceWithTransaction(t *transaction, bData *balanceData) error {
+	fmt.Println(t)
 	if t.Type == "loss" {
 		found := false
 		for i, types := range bData.Data {
@@ -417,13 +404,10 @@ func updateUserPortfolioTransaction(user string, t *transaction) error {
 			}
 		}
 	}
-	updateUserPortfolioData(bData)
-	insertUserPortfolio(user, bData)
-	insertTransaction(t)
 	return nil
 }
 
-func updateUserPortfolioData(data *balanceData) {
+func refreshBalanceData(data *balanceData) {
 	var totalSum float64
 	for i, e := range data.Data {
 		var typeSum float64
@@ -443,11 +427,12 @@ func updateUserPortfolioData(data *balanceData) {
 	data.Time = time.Now().Unix()
 }
 
-func insertUserPortfolio(user string, data *balanceData) {
+func insertUserPortfolio(user string, data *balanceData) error {
 	_, err := db.Collection("balances").InsertOne(context.TODO(), data)
 	if err != nil {
 		log.Println(err)
 	}
+	return err
 }
 
 func insertPrice() {
@@ -470,6 +455,14 @@ func insertPrice() {
 
 func insertTransaction(t *transaction) {
 	_, err := db.Collection("transactions").InsertOne(context.TODO(), t)
+	if err != nil {
+		log.Println(err)
+	}
+}
+
+func insertTrade(gain *transaction, loss *transaction) {
+	t := trade{Gain: *gain, Loss: *loss, Time: time.Now().Unix(), User: gain.User}
+	_, err := db.Collection("trades").InsertOne(context.TODO(), t)
 	if err != nil {
 		log.Println(err)
 	}

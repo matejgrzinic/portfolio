@@ -103,7 +103,7 @@
           </button>
         </div>
         <div class="col">
-          <button type="button" class="btn btn-primary" id="transaction-new">
+          <button type="button" class="btn btn-primary" id="trade-new">
             New Trade
           </button>
         </div>
@@ -127,16 +127,16 @@
 
     <div
       class="modal fade"
-      id="exampleModal"
+      id="transactionModal"
       tabindex="-1"
       role="dialog"
-      aria-labelledby="exampleModalLabel"
+      aria-labelledby="transactionModalLabel"
       aria-hidden="true"
     >
       <div class="modal-dialog modal-lg" role="document">
         <div class="modal-content">
           <div class="modal-header">
-            <h5 class="modal-title" id="exampleModalLabel">New Transaction</h5>
+            <h5 class="modal-title" id="transactionModalLabel">New Transaction</h5>
             <button
               type="button"
               class="close"
@@ -189,7 +189,7 @@
               </div>
               <div class="form-group row">
                 <label
-                  for="transaction-currency"
+                  for="transaction-amount"
                   class="col-sm-2 col-form-label"
                   >Amount</label
                 >
@@ -242,6 +242,162 @@
               type="button"
               class="btn btn-primary"
               id="transaction-submit"
+            >
+              Submit
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div
+      class="modal fade"
+      id="tradeModal"
+      tabindex="-1"
+      role="dialog"
+      aria-labelledby="tradeModalLabel"
+      aria-hidden="true"
+    >
+      <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="tradeModalLabel">New Trade</h5>
+            <button
+              type="button"
+              class="close"
+              data-dismiss="modal"
+              aria-label="Close"
+            >
+              <span aria-hidden="true">&times;</span>
+            </button>
+          </div>
+          <div class="modal-body">
+            <form>
+              <div class="form-group row">
+                <label
+                  for="trade-sell-currency-type"
+                  class="col-sm-2 col-form-label"
+                  >Sell type</label
+                >
+                <div class="col-sm-10">
+                  <select class="form-control" id="trade-sell-currency-type">
+                    <option value="default">Select Currency type</option>
+                    <option value="cash">Cash</option>
+                    <option value="crypto">Crypto</option>
+                    <option value="stock">Stock</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-group row">
+                <label
+                  for="sell-trade-currency"
+                  class="col-sm-2 col-form-label"
+                  >Sell Currency</label
+                >
+                <div class="col-sm-10">
+                  <select class="form-control" id="trade-sell-currency">
+                    <option value="default">Select Currency</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-group row">
+                <label
+                  for="trade-sell-amount"
+                  class="col-sm-2 col-form-label"
+                  >Sell Amount</label
+                >
+                <div class="col-sm-10">
+                  <input
+                    type="number"
+                    class="form-control"
+                    placeholder="Enter amount"
+                    aria-label=""
+                    aria-describedby="basic-addon1"
+                    id="trade-sell-amount"
+                  />
+                </div>
+              </div>
+              <div class="form-group row">
+                <label
+                  for="trade-buy-currency-type"
+                  class="col-sm-2 col-form-label"
+                  >Buy type</label
+                >
+                <div class="col-sm-10">
+                  <select class="form-control" id="trade-buy-currency-type">
+                    <option value="default">Select Currency type</option>
+                    <option value="cash">Cash</option>
+                    <option value="crypto">Crypto</option>
+                    <option value="stock">Stock</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-group row">
+                <label
+                  for="sell-buy-currency"
+                  class="col-sm-2 col-form-label"
+                  >Buy Currency</label
+                >
+                <div class="col-sm-10">
+                  <select class="form-control" id="trade-buy-currency">
+                    <option value="default">Select Currency</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-group row">
+                <label
+                  for="trade-buy-amount"
+                  class="col-sm-2 col-form-label"
+                  >Buy Amount</label
+                >
+                <div class="col-sm-10">
+                  <input
+                    type="number"
+                    class="form-control"
+                    placeholder="Enter amount"
+                    aria-label=""
+                    aria-describedby="basic-addon1"
+                    id="trade-buy-amount"
+                  />
+                </div>
+              </div>
+              <div class="form-group row">
+                <label
+                  for="trade-description"
+                  class="col-sm-2 col-form-label"
+                  >Description</label
+                >
+                <div class="col-sm-10">
+                  <input
+                    type="text"
+                    class="form-control"
+                    placeholder="Enter Description"
+                    aria-label=""
+                    aria-describedby="basic-addon1"
+                    id="trade-description"
+                  />
+                </div>
+              </div>
+            </form>
+          </div>
+          <div class="alert alert-success hidden" id="trade-success">
+            This is a success alert—check it out!
+          </div>
+          <div class="alert alert-danger hidden" id="trade-error">
+            Error
+          </div>
+          <div class="modal-footer">
+            <button
+              type="button"
+              class="btn btn-secondary"
+              data-dismiss="modal"
+            >
+              Close
+            </button>
+
+            <button
+              type="button"
+              class="btn btn-primary"
+              id="trade-submit"
             >
               Submit
             </button>

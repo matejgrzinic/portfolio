@@ -15,7 +15,7 @@ var templates = template.Must(template.ParseGlob("templates/*"))
 var db *mongo.Database
 
 func main() {
-	db = setup()
+	db = databaseSetup()
 
 	go startUpdatePriceInterval()
 	go startUpdateUserPortfolioInterval()
@@ -32,6 +32,7 @@ func main() {
 	r.HandleFunc("/api/v1/table/{table}", apiV1Table)
 	r.HandleFunc("/api/v1/currencies/{type}/{currency}", apiV1Currencies)
 	r.HandleFunc("/api/v1/transaction", apiV1Transaction)
+	r.HandleFunc("/api/v1/trade", apiV1Trade)
 	r.HandleFunc("/api/v1/username", apiV1Username)
 	r.HandleFunc("/api/v1/networth", apiV1Networth)
 	// change first two if you want to change how to access it over internet. last one is location on disk

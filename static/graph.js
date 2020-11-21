@@ -27,6 +27,11 @@ function updateGraph(timeframe) {
     success: function (result) {
       let r = jQuery.parseJSON(result);
       setupGraph(r);
+
+      let percentChange =
+        (parseFloat(r.Value[0]) / parseFloat(r.Value[r.Value.length - 1]) - 1) *
+        100;
+      $("#title-change").text(percentChange.toFixed(2));
     },
   });
 }
@@ -164,6 +169,16 @@ function resetTransactionModal() {
   $("#transaction-description").val("");
 }
 
+function resetTradeModal() {
+  $("#trade-sell-currency-type").val("default");
+  $("#trade-sell-currency").val("default");
+  $("#trade-buy-currency-type").val("default");
+  $("#trade-buy-currency").val("default");
+  $("#trade-sell-amount").val("");
+  $("#trade-buy-amount").val("");
+  $("#trade-description").val("");
+}
+
 function generateTable(table, data) {
   percentAdd = ["HourChange", "DayChange", "WeekChange", "MonthChange"];
   for (let element of data) {
@@ -224,6 +239,7 @@ $("#transaction-submit").click(function () {
     amount: $("#transaction-amount").val(),
     description: $("#transaction-description").val(),
   };
+  console.log(transactionData);
 
   $.ajax({
     type: "POST",
@@ -249,5 +265,78 @@ $("#transaction-new").click(function () {
   $("#transaction-success").hide();
   $("#transaction-error").hide();
 
-  $("#exampleModal").modal("show");
+  $("#transactionModal").modal("show");
+});
+
+function addOptionsTrade(el, type, curType) {
+  $.ajax({
+    url: "/api/v1/currencies/" + type + "/" + curType,
+    success: function (result) {
+      let r = jQuery.parseJSON(result);
+      for (o of r) {
+        el.append(new Option(o, o));
+      }
+    },
+  });
+}
+
+$("#trade-sell-currency-type").change(function () {
+  $("#trade-sell-currency option[value!='default']").remove();
+  addOptionsTrade(
+    $("#trade-sell-currency"),
+    "loss",
+    $("#trade-sell-currency-type").val()
+  );
+});
+
+$("#trade-buy-currency-type").change(function () {
+  $("#trade-buy-currency option[value!='default']").remove();
+  addOptionsTrade(
+    $("#trade-buy-currency"),
+    "gain",
+    $("#trade-buy-currency-type").val()
+  );
+});
+
+$("#trade-submit").click(function () {
+  $("#trade-success").hide();
+  $("#trade-error").hide();
+
+  let tradeData = {
+    "sell-type": $("#trade-sell-currency-type").val(),
+    "sell-currency": $("#trade-sell-currency").val(),
+    "sell-amount": $("#trade-sell-amount").val(),
+
+    "buy-type": $("#trade-buy-currency-type").val(),
+    "buy-currency": $("#trade-buy-currency").val(),
+    "buy-amount": $("#trade-buy-amount").val(),
+
+    description: $("#trade-description").val(),
+  };
+
+  $.ajax({
+    type: "POST",
+    url: "/api/v1/trade",
+    data: JSON.stringify(tradeData),
+    success: function (result) {
+      let r = JSON.parse(result);
+      if (r.Status == "OK") {
+        $("#trade-success").show();
+        $("#trade-success").text(r.Message);
+      } else {
+        $("#trade-error").show();
+        $("#trade-error").text(r.Message);
+      }
+      updateAll();
+      resetTradeModal();
+    },
+    contentType: "json",
+  });
+});
+
+$("#trade-new").click(function () {
+  $("#trade-success").hide();
+  $("#trade-error").hide();
+
+  $("#tradeModal").modal("show");
 });
