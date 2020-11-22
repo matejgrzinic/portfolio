@@ -12,8 +12,8 @@ jobs:
     name: Build
     runs-on: ubuntu-latest
     steps:    
-    - name: Create mongo Docker container
-      uses: DigiPie/mongo-action@v1.0.0    
+    - name: Start MongoDB
+      uses: supercharge/mongodb-github-action@1.3.0   
 
     - name: Set up Go 1.x
       uses: actions/setup-go@v2
