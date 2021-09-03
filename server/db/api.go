@@ -7,4 +7,5 @@ import (
 type API interface {
 	QueryRow(name string, col string, filter interface{}, options *options.FindOneOptions, result interface{}) error
 	QueryRows(name string, col string, filter interface{}, options *options.FindOptions, result interface{}, rowFunc func() error) error
+	InsertOne(name string, col string, data interface{}) error
 }

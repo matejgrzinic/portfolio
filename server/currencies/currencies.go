@@ -2,10 +2,13 @@ package currencies
 
 import (
 	"fmt"
+	"log"
+	"os"
 	"time"
 
 	"github.com/matejgrzinic/portfolio/db"
 	"github.com/matejgrzinic/portfolio/external"
+	"github.com/matejgrzinic/portfolio/refresher"
 )
 
 var (
@@ -13,23 +16,41 @@ var (
 	FiatType           = "fiat"
 )
 
-type changesMap map[string]map[string]map[string]float64
-
 type Currencies struct {
 	data    map[string]*currencyType
 	changes changesMap
-	dbAPI   *db.DB
-	// prices handler?? // save prices + calculate changes
-	// readyChan chan struct{} // currency type signal when data is rdy first time
+	db      db.API
+
+	dbSaveInterval time.Duration
+
+	resultSaveChan chan error
+	stopSaveChan   chan struct{}
 }
 
-func NewCurrencies() *Currencies {
+type CTX interface {
+	DB() db.API
+}
+
+func NewCurrencies(ctx CTX) *Currencies {
 	c := new(Currencies)
 
 	c.data = map[string]*currencyType{
-		FiatType:           newCurrecyType(external.NewCryptocurrencyFetcher(), time.Hour),
-		CryptocurrencyType: newCurrecyType(external.NewFiatFetcher(), time.Minute),
+		FiatType:           newCurrecyType(external.NewFiatFetcher(), time.Hour),
+		CryptocurrencyType: newCurrecyType(external.NewCryptocurrencyFetcher(), time.Minute),
 	}
+	c.db = ctx.DB()
+
+	dbIntervalStr := os.Getenv("DB_SAVE_INTERVAL_SECONDS")
+	dbInterval, err := time.ParseDuration(dbIntervalStr)
+	if err != nil {
+		log.Panicf("invalid DB_SAVE_INTERVAL_SECONDS env variable: %v", dbIntervalStr)
+	}
+	c.dbSaveInterval = dbInterval
+	c.stopSaveChan = make(chan struct{}, 1)
+	c.resultSaveChan = make(chan error, 1)
+
+	refresher.StartRefresher(c.resultSaveChan, c.stopSaveChan, c.dbSaveInterval, c.saveToDbAndUpdateChanges)
+	<-c.resultSaveChan
 
 	return c
 }
@@ -56,25 +77,19 @@ func (c *Currencies) GetCurrency(currencyType, symbol string) (*external.Currenc
 
 type CurrencyDataWithChanges struct {
 	external.CurrencyData
-	Changes map[string]float64
+	Changes CurrencyChanges `json:"changes"`
 }
-
-// func (c *Currencies) getChangesForCurrency(currencyType, symbol string) {
-
-// }
 
 func (c *Currencies) GetCurrencyWithChanges(currencyType, symbol string) (*CurrencyDataWithChanges, error) {
 	currencyData, err := c.GetCurrency(currencyType, symbol)
 	if err != nil {
 		return nil, err
 	}
-	changes := map[string]float64{"hour": 1.04, "day": 1.10}
 
-	// getChanges(type, symbol) map, err
-	// -> cached nekje
-	// --> from prices where time > now-year
-	// --> refresh every prices insert
-	// ---> insert every 10min?
+	changes, err := c.getChangesForCurrency(currencyType, symbol)
+	if err != nil {
+		return nil, err
+	}
 
 	cwc := CurrencyDataWithChanges{CurrencyData: *currencyData, Changes: changes}
 	return &cwc, nil

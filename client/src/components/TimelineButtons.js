@@ -9,12 +9,6 @@ export const TimelineButtons = ({ onChange }) => {
       <Button
         as="input"
         type="button"
-        value="Hour"
-        onClick={onChangeGen("hour")}
-      />{" "}
-      <Button
-        as="input"
-        type="button"
         value="Day"
         onClick={onChangeGen("day")}
       />{" "}
@@ -30,7 +24,7 @@ export const TimelineButtons = ({ onChange }) => {
         value="Month"
         onClick={onChangeGen("month")}
       />{" "}
-      <Button
+      {/* <Button
         as="input"
         type="button"
         value="Year"
@@ -41,7 +35,7 @@ export const TimelineButtons = ({ onChange }) => {
         type="button"
         value="All"
         onClick={onChangeGen("all")}
-      />{" "}
+      />{" "} */}
     </>
   );
 };

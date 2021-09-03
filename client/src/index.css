@@ -1,13 +1,56 @@
 body {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen",
+    "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue",
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
 code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+  font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New",
     monospace;
+}
+
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+}
+
+.form-switch.form-switch-md {
+  padding-left: 4.5em;
+  height: 2.5em;
+}
+
+.form-switch.form-switch-md .form-check-input {
+  margin-left: -4.5em;
+  height: 2em;
+  width: 4em;
+}
+
+.form-switch.form-switch-md .form-check-label {
+  padding-top: 0.5em;
+}
+
+.form-switch.form-switch-lg {
+  padding-left: 8.5em;
+  height: 4.5em;
+}
+
+.form-switch.form-switch-lg .form-check-input {
+  margin-left: -8.5em;
+  height: 4em;
+  width: 8em;
+}
+
+.form-switch.form-switch-lg .form-check-label {
+  padding-top: 1.5em;
+}
+
+.form-row {
+  padding: 5px;
 }

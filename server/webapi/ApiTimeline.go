@@ -4,23 +4,28 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/matejgrzinic/portfolio/appcontext"
-
 	"github.com/gorilla/mux"
+	"github.com/matejgrzinic/portfolio/appcontext"
+	"github.com/matejgrzinic/portfolio/portfolio"
 )
 
-func ApiTimeline(appcontext *appcontext.AppContext) func(http.ResponseWriter, *http.Request) {
+func ApiTimeline(ctx appcontext.CTX) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		user := "Ace"
-		timeframe := mux.Vars(r)["timeframe"]
+		user, ok := r.Context().Value("USER").(*portfolio.User)
+		if !ok {
+			log.Println("no user in context")
+			ReplyInternalError(w)
+			return
+		}
 
-		data, err := appcontext.Portfolio.GetUserTimeline(user, timeframe) //appcontext.Db.Query.GetUserTimeline(user, timeframe)
+		timeframe := mux.Vars(r)["timeframe"]
+		b, err := ctx.Portfolio().UserTimeline(user, timeframe)
 		if err != nil {
 			log.Println(err)
 			ReplyInternalError(w)
 			return
 		}
 
-		ReplyOK(w, data)
+		ReplyOK(w, b)
 	}
 }

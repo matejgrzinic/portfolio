@@ -6,13 +6,17 @@ import (
 	"time"
 
 	"github.com/matejgrzinic/portfolio/external"
+	"github.com/matejgrzinic/portfolio/refresher"
 )
 
 type currencyType struct {
 	data            external.CurrenciesDataMap
 	refreshInterval time.Duration
-	stopRefreshChan chan struct{} // test only
-	fetcher         external.Fetcher
+
+	errorRefreshChan chan error
+	stopRefreshChan  chan struct{} // test only
+
+	fetcher external.Fetcher
 }
 
 func newCurrecyType(fetcher external.Fetcher, refreshInterval time.Duration) *currencyType {
@@ -20,9 +24,13 @@ func newCurrecyType(fetcher external.Fetcher, refreshInterval time.Duration) *cu
 	ct.data = external.CurrenciesDataMap{}
 	ct.fetcher = fetcher
 	ct.refreshInterval = refreshInterval
+
+	ct.errorRefreshChan = make(chan error, 1)
 	ct.stopRefreshChan = make(chan struct{}, 1)
-	ct.refreshData()
-	go ct.startRefresher()
+
+	refresher.StartRefresher(ct.errorRefreshChan, ct.stopRefreshChan, refreshInterval, ct.refreshData)
+	<-ct.errorRefreshChan
+
 	return ct
 }
 
@@ -37,13 +45,14 @@ func (ct *currencyType) startRefresher() {
 	}
 }
 
-func (ct *currencyType) refreshData() {
+func (ct *currencyType) refreshData() error {
 	data, err := ct.fetcher.Fetch()
 	if err != nil {
 		log.Println("refresh data:", err)
-		return
+		return err
 	}
 	ct.data = data
+	return nil
 }
 
 func (ct *currencyType) Get(symbol string) (*external.CurrencyData, error) {

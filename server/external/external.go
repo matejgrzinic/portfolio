@@ -1,8 +1,8 @@
 package external
 
 type CurrencyData struct {
-	Symbol string  `json:"fiat"`
-	Price  float64 `json:"cryptocurrency"`
+	Symbol string  `json:"symbol"`
+	Price  float64 `json:"price"`
 }
 
 type CurrenciesDataMap map[string]CurrencyData

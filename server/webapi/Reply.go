@@ -2,7 +2,6 @@ package webapi
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 )
@@ -46,6 +45,5 @@ func ReplyOK(w http.ResponseWriter, data interface{}) {
 }
 
 func ReplyInternalError(w http.ResponseWriter) {
-	w.WriteHeader(http.StatusInternalServerError)
-	fmt.Fprintf(w, "INTERNAL SERVER ERROR: something went wrong :(")
+	http.Error(w, "something went wrong :(", http.StatusInternalServerError)
 }

@@ -4,25 +4,36 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/gorilla/mux"
+	"github.com/joho/godotenv"
+	"github.com/matejgrzinic/portfolio/appcontext"
+	"github.com/matejgrzinic/portfolio/handler"
 )
 
+func SetupEnviormentVariables() {
+	err := godotenv.Load("config.env")
+
+	if err != nil {
+		log.Fatalf("Error loading .env file: %v", err)
+	}
+}
+
 func main() {
-	// appcontext := new(appcontext.AppContext)
-	// appcontext.Ctx = context.TODO() // use it for queries??
-	// appcontext.Db = db.NewDatabase("portfolio2")
-	// appcontext.PriceData = external.NewPriceData(appcontext.Db.Db)
-	// appcontext.Portfolio = portfolio.NewPortfolio(appcontext.Db, appcontext.PriceData)
+	SetupEnviormentVariables()
+
+	ctx := appcontext.SetupAppContext()
 
 	r := mux.NewRouter()
-	//handler.SetupHandlers(r, appcontext)
+	handler.SetupHandlers(r, ctx)
 
-	fmt.Printf("Starting server on: http://localhost:10000\n")
+	port := os.Getenv("PORT")
+	fmt.Printf("Starting server on: http://localhost:%v\n", port)
 
 	s := &http.Server{
-		Addr:         ":10000",
+		Addr:         fmt.Sprintf(":%v", port),
 		Handler:      r,
 		ReadTimeout:  10 * time.Second,
 		WriteTimeout: 10 * time.Second,

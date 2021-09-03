@@ -2,7 +2,6 @@ package currencies
 
 import (
 	"fmt"
-	"log"
 	"testing"
 	"time"
 
@@ -98,13 +97,43 @@ func TestGetCurrencyWithChanges(t *testing.T) {
 		}, nil
 	}
 
-	c := new(Currencies)
-	c.data = map[string]*currencyType{
-		"fiat": newCurrecyType(mockFetcher, time.Minute),
-	}
-	c.data["fiat"].stopRefreshChan <- struct{}{}
+	t.Run("OK", func(t *testing.T) {
+		c := new(Currencies)
+		c.data = map[string]*currencyType{
+			"fiat": newCurrecyType(mockFetcher, time.Minute),
+		}
+		c.data["fiat"].stopRefreshChan <- struct{}{}
+		c.changes = changesMap{"fiat": {"USD": {"hour": 1.1, "day": 1.2, "week": 1.3, "month": 1.4}}}
 
-	log.Println(c.GetCurrencyWithChanges("fiat", "USD"))
+		curr, err := c.GetCurrencyWithChanges("fiat", "USD")
+		assert.NoError(t, err)
+		assert.Equal(t, curr.Symbol, "USD")
+		assert.Equal(t, curr.Price, 2.0)
+		assert.Equal(t, curr.Changes[Hour], 1.1)
+		assert.Equal(t, curr.Changes[Day], 1.2)
+		assert.Equal(t, curr.Changes[Week], 1.3)
+		assert.Equal(t, curr.Changes[Month], 1.4)
+	})
+
+	t.Run("Changes do not exist", func(t *testing.T) {
+		c := new(Currencies)
+		c.data = map[string]*currencyType{
+			"fiat": newCurrecyType(mockFetcher, time.Minute),
+		}
+		c.data["fiat"].stopRefreshChan <- struct{}{}
+
+		curr, err := c.GetCurrencyWithChanges("fiat", "USD")
+		assert.Nil(t, curr)
+		assert.EqualError(t, err, "get changes for [type: fiat] [symbol: USD]")
+	})
+
+	t.Run("Currency does not exist", func(t *testing.T) {
+		c := new(Currencies)
+		curr, err := c.GetCurrencyWithChanges("fiat", "USD")
+		assert.Nil(t, curr)
+		assert.EqualError(t, err, "invalid currency type: fiat")
+	})
+
 }
 
 func TestRefresh(t *testing.T) {

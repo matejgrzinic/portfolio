@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os"
 
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -25,6 +26,8 @@ func (dba *DBAccess) QueryRow(name string, col string, filter interface{}, optio
 	if err != nil {
 		return fmt.Errorf("query row [%s], decode row: %v", name, err)
 	}
+
+	// TODO errNoRows check
 
 	return nil
 }
@@ -51,11 +54,24 @@ func (dba *DBAccess) QueryRows(name string, col string, filter interface{}, opti
 		}
 	}
 
+	// TODO errNoRows check
+
+	return nil
+}
+
+func (dba *DBAccess) InsertOne(name string, col string, data interface{}) error {
+	_, err := dba.Db.Collection(col).InsertOne(dba.ctx, data)
+	if err != nil {
+		return fmt.Errorf("insert one [%s]: %v", name, err)
+	}
+
+	// TODO errNoRows check
+
 	return nil
 }
 
 func newDBAccess(dbName string) *DBAccess {
-	clientOptions := options.Client().ApplyURI("mongodb://localhost:27017")
+	clientOptions := options.Client().ApplyURI(os.Getenv("DB_URL"))
 	client, err := mongo.Connect(context.TODO(), clientOptions)
 	if err != nil {
 		log.Println(err)

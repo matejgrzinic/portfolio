@@ -7,7 +7,7 @@ export const Balance = ({ fetchBalance }) => {
   useEffect(() => {
     const updateBalance = async () => {
       let data = await fetchBalance();
-      setBalance(data.data.data);
+      setBalance(data.data);
     };
     updateBalance();
   }, []);

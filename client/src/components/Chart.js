@@ -5,12 +5,13 @@ import TimelineButtons from "./TimelineButtons";
 
 export const Chart = ({ fetchChart }) => {
   const [timeline, setTimeline] = useState([]);
-  const [timeframe, setTimeframe] = useState("hour");
+  const [timeframe, setTimeframe] = useState("day");
 
   useEffect(() => {
     const updateChart = async () => {
       let data = await fetchChart(timeframe);
       setTimeline(data.data);
+      console.log(data.data);
     };
     updateChart();
   }, [timeframe]);
@@ -87,7 +88,7 @@ export const Chart = ({ fetchChart }) => {
   return (
     <>
       <TimelineButtons onChange={updateChart} />
-      <Line data={data} options={options} />
+      <Line data={data} options={options} height={100} />
     </>
   );
 };
